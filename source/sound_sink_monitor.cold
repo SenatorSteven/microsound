@@ -1,0 +1,43 @@
+#include <stdio.h>
+#include <pulse/pulseaudio.h>
+
+// Global variable to hold the program name
+const char *programName = "sound_sink_monitor";
+
+static void pa_state_cb(pa_context *c, void *userdata) {
+    pa_operation *o;
+    pa_sink_info *si;
+    
+    o = pa_context_get_sink_info_by_name(c, NULL, pa_context_get_server(c), PA_SINK_INFO_PROPERTY_DEVICE_DESCRIPTION, NULL, NULL);
+    
+    pa_operation_unref(o);
+}
+
+static void pa_subscribe_cb(pa_context *c, pa_subscription_event_type_t t, uint32_t idx, void *userdata) {
+    if ((t & PA_SUBSCRIPTION_EVENT_CHANGE) && (t & PA_SUBSCRIPTION_EVENT_SINK)) {
+        pa_state_cb(c, userdata);
+    }
+}
+
+int main(const int argumentAmount, const char *const *argument) {
+    // Create a PulseAudio main loop and connection context
+    pa_mainloop *m = pa_mainloop_new();
+    pa_mainloop_api *api = pa_mainloop_get_api(m);
+    pa_context *c;
+    
+    // Set up the PulseAudio context
+    c = pa_context_new(api, programName);
+    pa_context_connect(c, NULL, PA_CONTEXT_NOAUTOSPAWN, NULL);
+
+    pa_context_set_state_callback(c, pa_state_cb, NULL);
+    pa_context_set_subscribe_callback(c, pa_subscribe_cb, NULL);
+    
+    // Main loop
+    pa_mainloop_run(m);
+
+    // Cleanup
+    pa_context_unref(c);
+    pa_mainloop_free(m);
+    
+    return 0;
+}

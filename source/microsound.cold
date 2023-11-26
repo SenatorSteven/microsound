@@ -1,0 +1,1297 @@
+/*!
+	add multi-monitor support
+	add argument parsing
+	DON'T add config parser (okay maybe do)
+	use inter-process communication (or not)
+
+	spawn window in (
+		  set_of_windows
+		| pointer_window_static
+		| pointer_window_dynamic
+	)
+*/
+/*!
+
+
+
+def struct{
+	int leftX;
+	int rightX;
+	int topY;
+	int bottomY;
+	int w;
+	int h;
+} Monitor;
+
+#define GETPOINTERMONITOR_DEC uint getPointerMonitor(void)
+
+GETPOINTERMONITOR_DEC{
+	if(monitorAmount > 1 and (functionReply = xcb_query_pointer_reply(connection, (*screen).root))){
+		const int x = (*r).root_x;
+		const int y = (*r).root_y;
+		const Monitor *monitor = monitorStart;
+		uint current = 0;
+		free(functionReply);
+		functionReply = NULL;
+		loop:{
+			if(isInClosedOpenBounds(m.leftX, x, m.rightX) and isInClosedOpenBounds(m.topY, y, m.bottomY)){
+				ret current;
+			}
+			if(inc current < monitorAmount){
+				inc monitor;
+				jmp loop;
+			}
+		}
+	}
+	ret 0;
+}
+
+
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*! microsound.cold
+
+MIT License
+
+Copyright (C) 2022 Stefanos "Steven" Tsakiris
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE. */
+
+#define _POSIX_C_SOURCE /*-*/ 200112L
+
+/*!includes:{*/
+	#include <signal.h>
+	#include <stdint.h>
+	#include <stdio.h>
+	#include <stdlib.h>
+	#include <xcb/randr.h>
+	#include <xcb/xcb.h>
+	#include "cold/cold.hold"
+
+
+
+	#include <unistd.h>
+
+
+
+/*!}*/
+
+/*!user_defines:{*/
+	#define DefaultErrorStream /*---------*/ (stderr)
+/*!}*/
+
+/*!defines:{*/
+	#define DEBUG /*----------------------*/ (true)
+
+	#define _EMPTY_MACRO /*---------------*/
+
+	#if DEBUG
+		#define _PRINTEVENT_DEC /*-------------*/ local void printEvent(void)
+		#define _PRINTUNEXPECTEDEVENT_DEC /*---*/ local void printUnexpectedEvent(void)
+		#define _printEvent(void) /*-----------*/ (printEvent())
+		#define _printUnexpectedEvent(void) /*-*/ (printUnexpectedEvent())
+	#else
+		#define _PRINTEVENT_DEC /*-------------*/ def void dA
+		#define _PRINTUNEXPECTEDEVENT_DEC /*---*/ def void a2
+		#define _printEvent(void) /*-----------*/ _EMPTY_MACRO
+		#define _printUnexpectedEvent(void) /*-*/ _EMPTY_MACRO
+	#endif
+
+	#define PRINTERROR_DEC /*-------------*/ local void printError(const char *const string)
+	#define OPENERRORSTREAM_DEC /*--------*/ local bool openErrorStream(void)
+	#define CLOSEERRORSTREAM_DEC /*-------*/ local void closeErrorStream(void)
+	#define PRINTCONNECTIONERROR_DEC /*---*/ local void printConnectionError(void)
+	#define REQUESTCHECK_DEC /*-----------*/ local void requestCheck(const xcb_void_cookie_t c, const char *const errorMessage, const uint8 errorCode)
+	#define PRINTEVENT_DEC /*-------------*/ _PRINTEVENT_DEC
+	#define PRINTXCBERROR_DEC /*----------*/ local void printXCBError(void)
+	#define PRINTUNEXPECTEDEVENT_DEC /*---*/ _PRINTUNEXPECTEDEVENT_DEC
+
+	#define printEvent(void) /*-----------*/ _printEvent()
+	#define printUnexpectedEvent(void) /*-*/ _printUnexpectedEvent()
+/*!}*/
+
+/*!defs:{*/
+	def uint32 /*-*/ xEventMask;
+/*!}*/
+
+
+
+def struct{
+	uint16 x;
+	uint16 y;
+	uint16 width;
+	uint16 height;
+	uint32 size;
+	void *data;
+} Texture;
+
+
+
+/*!globals:{*/
+	#define xScreen /*-------*/ xcb_screen_t
+	#define xConnection /*---*/ xcb_connection_t
+	#define xGenericError /*-*/ xcb_generic_error_t
+	#define xVisual /*-------*/ xcb_visualid_t
+	#define xGC /*-----------*/ xcb_gcontext_t
+	#define xDepth /*--------*/ uint8
+	#define xGenericEvent /*-*/ xcb_generic_event_t
+
+
+
+	#define xWindow /*-------*/ xcb_window_t
+
+
+
+	#define xFont /*---------*/ xcb_font_t
+
+
+
+	const char * /*----*/ programName;
+	const char * /*----*/ errorPath;
+	const char * /*----*/ connectionName;
+	const xScreen * /*-*/ screen;
+	const char * /*----*/ quitMessage;
+	bool /*------------*/ mustOpenErrorStream;
+	FILE * /*----------*/ errorStream;
+	xConnection * /*---*/ connection;
+	xGenericError * /*-*/ genericError;
+	xGC /*-------------*/ gc;
+	xGenericEvent * /*-*/ event;
+	void * /*----------*/ agp0;
+
+
+
+	xWindow /*---------*/ window;
+	xFont /*-----------*/ font;
+	 int /*------------*/ x;
+	 int /*------------*/ y;
+	uint /*------------*/ width;
+	uint /*------------*/ height;
+
+
+
+	uint /*------------*/ fontX;
+	uint /*------------*/ fontY;
+	uint /*------------*/ fontWidth;
+	uint /*------------*/ fontHeight;
+
+
+
+	uint /*------------*/ duration;
+
+
+
+	uint32 /*----------*/ foreground;
+	uint32 /*----------*/ background;
+
+
+
+	xcb_colormap_t /*-------*/ colormap;
+	xVisual /*--------------*/ visual;
+	xDepth /*---------------*/ depth;
+
+
+
+	const char  left[] = "left";
+	const char right[] = "right";
+
+
+
+	bool received;
+
+
+
+	const uint32 stackMode = XCB_STACK_MODE_ABOVE;
+
+
+
+	Texture base;
+	Texture baseMuted;
+
+
+
+	#undef  xWindow
+
+
+
+	#undef  xGenericEvent
+	#undef  xGC
+	#undef  xGenericError
+	#undef  xConnection
+	#undef  xScreen
+/*!}*/
+
+/*!functions:{*/
+	PRINTERROR_DEC;
+	OPENERRORSTREAM_DEC;
+	CLOSEERRORSTREAM_DEC;
+	PRINTCONNECTIONERROR_DEC;
+	REQUESTCHECK_DEC;
+	PRINTEVENT_DEC;
+	PRINTXCBERROR_DEC;
+	PRINTUNEXPECTEDEVENT_DEC;
+/*!}*/
+
+
+
+
+
+
+
+
+
+#define QUIT_DEC /*----------*/ local void quit(const int signal)
+#define LITERAL_LENGTH(l) /*-*/ (sizeof(l) - 1)
+
+
+
+QUIT_DEC;
+
+
+
+QUIT_DEC{
+	if(signal != SIGUSR1){
+		printError("ignoring received signal, not SIGUSR1");
+		ret;
+	}
+	received = true;
+	xcb_configure_window(connection, window, XCB_CONFIG_WINDOW_STACK_MODE, &stackMode);
+	xcb_map_window(connection, window);
+	xcb_flush(connection);
+	ret;
+}
+
+
+
+
+
+
+
+
+
+#define LOADTEXTURE_DEC /*---------------------*/ Texture loadTexture(const char *const path)
+
+
+
+LOADTEXTURE_DEC;
+
+
+
+/*!
+	optimize this
+*/
+LOADTEXTURE_DEC{
+	Texture texture;
+	FILE *file;
+	uint offset;
+	uint8 data[26];
+	if(!(file = fopen(path, "rb"))){
+		printError("could not open texture file");
+		jmp retFailure;
+	}
+	if(fread(data, 1, 26, file) != 26){
+		printError("could not read texture file data");
+		jmp retFailure;
+	}
+	if(*data != 'B' or *(data + 1) != 'M'){
+		printError("texture file is not bitmap");
+		jmp retFailure;
+	}
+	offset         = *(uint32 *)(data + 10);
+	texture.width  = *(uint32 *)(data + 18);
+	texture.height = *(uint32 *)(data + 22);
+	texture.size   = *(uint32 *)(data +  2) - offset;
+	fseek(file, offset, SEEK_SET);
+	if(!(texture.data = malloc(texture.size * sizeof(uint8)))){
+		printError("texture file is not bitmap");
+		jmp retFailure;
+	}
+	{
+		const uint width = texture.width * 4;
+		uint8 *start = texture.data;
+		uint8 *current = start + texture.size - width;
+		readRowLoop:{
+			if(fread(current, 1, width, file) != width){
+				printError("could not read texture file data");
+				jmp retFailure;
+			}
+			if((current -= width) >= start){
+				jmp readRowLoop;
+			}
+		}
+	}
+	fclose(file);
+	file = NULL;
+	ret texture;
+	retFailure:{
+		texture.width  = 0;
+		texture.height = 0;
+		texture.size   = 0;
+		texture.data   = NULL;
+		ret texture;
+	}
+}
+
+
+
+
+
+
+
+
+
+/*!
+	optimize this
+*/
+void applyTexture(Texture source, Texture destination){
+	uint sourceY;
+	uint sourceYWall;
+	uint destinationY;
+	uint destinationYWall;
+	if(source.x > destination.width or source.y > destination.height){
+		ret;
+	}
+
+
+
+	sourceY          = 0;
+	sourceYWall      = source.height;
+	destinationY     = source.y;
+	destinationYWall = destination.height;
+
+
+
+	yLoop:{
+		if(sourceY < sourceYWall and destinationY < destinationYWall){
+
+
+
+			uint sourceX          = 0;
+			uint sourceXWall      = source.width;
+			uint destinationX     = source.x;
+			uint destinationXWall = destination.width;
+
+
+
+			xLoop:{
+				if(sourceX < sourceXWall and destinationX < destinationXWall){
+
+
+
+					const uint32 *const s = (uint32 *)     source.data +      sourceY *      source.width + sourceX;
+					      uint32 *const d = (uint32 *)destination.data + destinationY * destination.width + destinationX;
+
+
+
+					const uint32 sA = *s >> 24;
+					if(sA == 255){
+						*d = *s;
+					}elif(sA){
+						const uint32 dA = (255 - sA) * (*d >> 24) / 255;
+						const uint32 a = sA + dA;
+						const uint32 r = ((*s <<  8) >> 24) * sA + ((*d <<  8) >> 24) * dA;
+						const uint32 g = ((*s << 16) >> 24) * sA + ((*d << 16) >> 24) * dA;
+						const uint32 b = ((*s << 24) >> 24) * sA + ((*d << 24) >> 24) * dA;
+						*d = (a << 24) + ((r / a) << 16) + ((g / a) << 8) + (b / a);
+					}
+
+
+
+					inc sourceX;
+					inc destinationX;
+					jmp xLoop;
+				}
+			}
+
+
+
+			inc sourceY;
+			inc destinationY;
+			jmp yLoop;
+		}
+	}
+	ret;
+}
+
+
+
+
+
+
+
+
+
+int main(const int argumentAmount, const char *const *argument){
+	jmp main;
+
+
+
+
+
+
+
+
+
+	main:{
+		(void)argumentAmount;
+
+
+
+		width  = 300;
+		height = 300;
+		x      = (1920 - width ) / 2;
+		y      = (1080 - height) / 2 + height;
+
+
+
+		duration = 2;
+		received = false;
+
+
+
+		foreground = 0xFFFFFFFF;
+		background = 0xFF000000;
+
+
+
+		base      = loadTexture("/home/steven/Documents/microsound/assets/wallpaper.bmp");
+		baseMuted = loadTexture("/home/steven/Documents/microsound/assets/wallpaper.bmp");
+		{
+			Texture sound = loadTexture("/home/steven/Documents/microsound/assets/sound.bmp");
+			{
+				const uint xPercent = 50;
+				const uint yPercent = 30;
+				sound.x = (base.width  - sound.width ) * xPercent / 100;
+				sound.y = (base.height - sound.height) * yPercent / 100;
+				applyTexture(sound, base);
+			}
+			{
+				const uint xPercent = 50;
+				const uint yPercent = 30;
+				sound.x = (baseMuted.width  - sound.width ) * xPercent / 100;
+				sound.y = (baseMuted.height - sound.height) * yPercent / 100;
+				applyTexture(sound, baseMuted);
+			}
+			free(sound.data);
+		}
+		{
+			Texture mute = loadTexture("/home/steven/Documents/microsound/assets/mute.bmp");
+			{
+				const uint xPercent = 50;
+				const uint yPercent = 90;
+				mute.x = (baseMuted.width  - mute.width ) * xPercent / 100;
+				mute.y = (baseMuted.height - mute.height) * yPercent / 100;
+				applyTexture(mute, baseMuted);
+			}
+			free(mute.data);
+		}
+
+
+
+
+
+
+
+
+
+		jmp setPrimaryGlobals;
+	}
+
+
+
+
+
+
+
+
+
+	setPrimaryGlobals:{
+		programName /*---------*/ = *argument;
+		errorPath /*-----------*/ = NULL;
+		connectionName /*------*/ = NULL;
+		mustOpenErrorStream /*-*/ = false;
+		errorStream /*---------*/ = DefaultErrorStream;
+		connection /*----------*/ = NULL;
+		genericError /*--------*/ = NULL;
+		event /*---------------*/ = NULL;
+		agp0 /*----------------*/ = NULL;
+		quitMessage /*---------*/ = NULL;
+		jmp establishServerConnection;
+	}
+
+
+
+
+
+
+
+
+
+	establishServerConnection:{
+		#define ESTABLISHSERVERCONNECTION_CONNECTION /*-----*/ connection
+		#define ESTABLISHSERVERCONNECTION_CONNECTIONNAME /*-*/ connectionName
+		#define ESTABLISHSERVERCONNECTION_SCREEN /*---------*/ screen
+		#include "xcb/establishServerConnection.hold"
+		switch xcb_connection_has_error(connection) over
+			to XCB_NONE: /*------------*/ /*-----------------------------------------------------------------*/ jmp generateIDs;
+			to XCB_CONN_CLOSED_PARSE_ERR: printError(connectionName? "invalid server name" : "no server name"); jmp mainEmergencyExit;
+			off: /*--------------------*/ printConnectionError(); /*-----------------------------------------*/ jmp mainEmergencyExit;
+		end
+	}
+
+
+
+
+
+
+
+
+
+	generateIDs:{
+		font /*-----*/ = xcb_generate_id(connection);
+		gc /*-------*/ = xcb_generate_id(connection);
+		window /*---*/ = xcb_generate_id(connection);
+		colormap /*-*/ = xcb_generate_id(connection);
+		jmp setupScreenProfile;
+	}
+
+
+
+
+
+
+
+
+
+	setupScreenProfile:{
+		#define SETUPSCREENPROFILE_VISUAL /*-*/ visual
+		#define SETUPSCREENPROFILE_DEPTH /*--*/ depth
+		#include "xcb/setupScreenProfile.hold"
+		jmp createWindow;
+	}
+
+
+
+
+
+
+
+
+
+	createWindow:{
+		struct{
+			uint32 /*---------*/ backgroundColor;
+			uint32 /*---------*/ borderColor;
+			bool /*-----------*/ overrideRedirect;
+			uint32 /*---------*/ eventMask;
+			xcb_colormap_t /*-*/ colormap;
+		} attribute;
+		requestCheck(xcb_create_colormap_checked(connection, XCB_COLORMAP_ALLOC_NONE, colormap, (*screen).root, visual), "could not create colormap", XCB_NONE);
+		attribute.backgroundColor /*--*/ = 0x00000000;
+		attribute.borderColor /*------*/ = 0x00000000;
+		attribute.overrideRedirect /*-*/ = true;
+		attribute.eventMask /*--------*/ = XCB_EVENT_MASK_EXPOSURE;
+		attribute.colormap /*---------*/ = colormap;
+
+
+
+		requestCheck(xcb_create_window_checked(connection, depth, window, (*screen).root, x, y, width, height, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, visual, XCB_CW_BACK_PIXEL | XCB_CW_BORDER_PIXEL | XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK | XCB_CW_COLORMAP, &attribute.backgroundColor), "could not create window", XCB_NONE);
+
+
+
+
+
+
+
+
+
+		{
+			uint32 gcData[3];
+			requestCheck(xcb_open_font_checked(connection, font, LITERAL_LENGTH("fixed"), "fixed"), "could not open font", XCB_NONE);
+			*(gcData + 0) = foreground;
+			*(gcData + 1) = background;
+			*(gcData + 2) = font;
+			requestCheck(xcb_create_gc_checked(connection, gc, window, XCB_GC_FOREGROUND | XCB_GC_BACKGROUND | XCB_GC_FONT, gcData), "could not create graphics context", XCB_NONE);
+		}
+		jmp acquireFontMetrics;
+	}
+
+
+
+
+
+
+
+
+
+	/*!
+		add icccm and ewmh information to all windows
+	*/
+
+
+
+
+
+
+
+
+
+	/*!
+		remove reply pointer - use a global that will be handled by the QUIT_DEC function
+	*/
+	acquireFontMetrics:{
+		xcb_query_font_reply_t *reply = xcb_query_font_reply(connection, xcb_query_font(connection, font), NULL);
+		if(reply){
+			fontX      = (*reply).min_bounds.left_side_bearing;
+			fontY      = (*reply).font_ascent;
+			fontWidth  = (*reply).max_bounds.right_side_bearing - (*reply).min_bounds.left_side_bearing;
+			fontHeight = (*reply).max_bounds.ascent + (*reply).max_bounds.descent;
+			free(reply);
+			reply = NULL;
+		}
+		jmp expressErrors;
+	}
+
+
+
+
+
+
+
+
+
+	expressErrors:{
+		if(depth == 24){
+			printError("could not use 32-bit depth, using 24-bit depth instead");
+		}
+		jmp setupSignal;
+	}
+
+
+
+
+
+
+
+
+
+	setupSignal:{
+		#define Sigaction /*-*/ struct sigaction
+		Sigaction s;
+		s.sa_handler = quit;
+		s.sa_flags = 0;
+		sigemptyset(&s.sa_mask);
+		sigaction(SIGUSR1, &s, NULL);
+		#undef  Sigaction
+		jmp eventLoop;
+	}
+
+
+
+
+
+
+
+
+
+	eventLoop:{
+		xcb_flush(connection);
+		free(event);
+		event = NULL;
+		jmp waitForEventLoop;
+	}
+	waitForEventLoop:{
+		if((event = xcb_wait_for_event(connection))){
+			jmp switchEvents;
+		}
+		if(xcb_connection_has_error(connection)){
+			printConnectionError();
+			jmp eventLoopExit;
+		}
+		jmp waitForEventLoop;
+	}
+	switchEvents:{
+		#undef  XCB_RANDR_SCREEN_CHANGE_NOTIFY
+		#define XCB_ONE /*------------------------*/ (1)
+		#define XCB_RANDR_SCREEN_CHANGE_NOTIFY /*-*/ (89)
+		printEvent();
+		switch (*event).response_type & ~0x80 over
+			to XCB_NONE: /*-----------------------*/ jmp errorEvent;
+			to XCB_ONE: /*------------------------*/ jmp unexpectedEvent;
+			to XCB_KEY_PRESS: /*------------------*/ jmp unexpectedEvent;
+			to XCB_KEY_RELEASE: /*----------------*/ jmp unexpectedEvent;
+			to XCB_BUTTON_PRESS: /*---------------*/ jmp unexpectedEvent;
+			to XCB_BUTTON_RELEASE: /*-------------*/ jmp unexpectedEvent;
+			to XCB_MOTION_NOTIFY: /*--------------*/ jmp unexpectedEvent;
+			to XCB_ENTER_NOTIFY: /*---------------*/ jmp unexpectedEvent;
+			to XCB_LEAVE_NOTIFY: /*---------------*/ jmp unexpectedEvent;
+			to XCB_FOCUS_IN: /*-------------------*/ jmp unexpectedEvent;
+			to XCB_FOCUS_OUT: /*------------------*/ jmp unexpectedEvent;
+			to XCB_KEYMAP_NOTIFY: /*--------------*/ jmp unexpectedEvent;
+			to XCB_EXPOSE: /*---------------------*/ jmp exposeEvent;
+			to XCB_GRAPHICS_EXPOSURE: /*----------*/ jmp unexpectedEvent;
+			to XCB_NO_EXPOSURE: /*----------------*/ jmp unexpectedEvent;
+			to XCB_VISIBILITY_NOTIFY: /*----------*/ jmp unexpectedEvent;
+			to XCB_CREATE_NOTIFY: /*--------------*/ jmp unexpectedEvent;
+			to XCB_DESTROY_NOTIFY: /*-------------*/ jmp unexpectedEvent;
+			to XCB_UNMAP_NOTIFY: /*---------------*/ jmp unexpectedEvent;
+			to XCB_MAP_NOTIFY: /*-----------------*/ jmp unexpectedEvent;
+			to XCB_MAP_REQUEST: /*----------------*/ jmp unexpectedEvent;
+			to XCB_REPARENT_NOTIFY: /*------------*/ jmp unexpectedEvent;
+			to XCB_CONFIGURE_NOTIFY: /*-----------*/ jmp unexpectedEvent;
+			to XCB_CONFIGURE_REQUEST: /*----------*/ jmp unexpectedEvent;
+			to XCB_GRAVITY_NOTIFY: /*-------------*/ jmp unexpectedEvent;
+			to XCB_RESIZE_REQUEST: /*-------------*/ jmp unexpectedEvent;
+			to XCB_CIRCULATE_NOTIFY: /*-----------*/ jmp unexpectedEvent;
+			to XCB_CIRCULATE_REQUEST: /*----------*/ jmp unexpectedEvent;
+			to XCB_PROPERTY_NOTIFY: /*------------*/ jmp unexpectedEvent;
+			to XCB_SELECTION_CLEAR: /*------------*/ jmp unexpectedEvent;
+			to XCB_SELECTION_REQUEST: /*----------*/ jmp unexpectedEvent;
+			to XCB_SELECTION_NOTIFY: /*-----------*/ jmp unexpectedEvent;
+			to XCB_COLORMAP_NOTIFY: /*------------*/ jmp unexpectedEvent;
+			to XCB_CLIENT_MESSAGE: /*-------------*/ jmp unexpectedEvent;
+			to XCB_MAPPING_NOTIFY: /*-------------*/ jmp eventLoop;
+			to XCB_GE_GENERIC: /*-----------------*/ jmp unexpectedEvent;
+			to XCB_RANDR_SCREEN_CHANGE_NOTIFY: /*-*/ jmp unexpectedEvent;
+			off: /*-------------------------------*/ jmp unexpectedEvent;
+		end
+		#undef  XCB_RANDR_SCREEN_CHANGE_NOTIFY
+		#undef  XCB_ONE
+	}
+
+
+
+
+
+
+
+
+
+	errorEvent:{
+		genericError = (void *)event;
+		printXCBError();
+		genericError = NULL;
+		jmp eventLoop;
+	}
+
+
+
+
+
+
+
+
+
+/*!
+	maybe: add a counter so that the first expose happens and only the next ones are interrupted
+*/
+	exposeEvent:{
+
+
+
+		#define PCLOSE_FAILURE /*-*/ (-1)
+
+
+
+		bool muteStatus = false;
+		FILE *file;
+		char soundNameLeft[4];
+		char soundNameRight[4];
+
+
+
+		*(soundNameLeft + 0) = '0';
+		*(soundNameLeft + 1) = '0';
+		*(soundNameLeft + 2) = '0';
+		*(soundNameLeft + 3) = '%';
+
+
+
+		*(soundNameRight + 0) = '0';
+		*(soundNameRight + 1) = '0';
+		*(soundNameRight + 2) = '0';
+		*(soundNameRight + 3) = '%';
+
+
+
+		received = false;
+
+
+
+
+
+
+
+
+
+		if((file = popen("pactl get-sink-mute @DEFAULT_SINK@", "r"))){
+			fgetc(file);
+			fgetc(file);
+			fgetc(file);
+			fgetc(file);
+			fgetc(file);
+			fgetc(file);
+			if(fgetc(file) != 'n'){
+				muteStatus = true;
+			}
+			if(pclose(file) == PCLOSE_FAILURE){
+				printError("could not close mute information file");
+			}
+		}else{
+			printError("could not open mute information file");
+		}
+
+
+
+
+
+
+
+
+
+		if((file = popen("pactl get-sink-volume @DEFAULT_SINK@|head -1|awk \'{print$5\" \"$12}\'", "r"))){
+			char c;
+			uint dataSize = 20;
+			char *dataStart = malloc(dataSize * sizeof(char));
+			char *dataCurrent = dataStart;
+			char *dataWall = dataStart + 10;
+			if(!dataStart){
+				/*!do this here*/
+			}
+
+
+
+
+
+
+
+
+
+			loopo:{
+				c = fgetc(file);
+				if(c == '%'){
+					if(dataCurrent - dataStart >= 3){
+						*(soundNameLeft + 0) = *(dataCurrent - 3);
+					}
+					if(dataCurrent - dataStart >= 2){
+						*(soundNameLeft + 1) = *(dataCurrent - 2);
+					}
+					*(soundNameLeft + 2) = *(dataCurrent - 1);
+					jmp loopoExit;
+				}
+				*dataCurrent = c;
+				if(inc dataCurrent < dataWall){
+					if(dataCurrent >= dataWall){
+						const uint offset = dataCurrent - dataStart;
+						dataSize += 20;
+						dataStart = realloc(dataStart, dataSize * sizeof(char));
+						dataCurrent = dataStart + offset;
+						dataWall = dataStart + dataSize;
+					}
+					jmp loopo;
+				}
+			}
+			loopoExit:{}
+
+
+
+
+
+
+
+
+
+			fgetc(file);
+
+
+
+
+
+
+
+
+
+			dataCurrent = dataStart;
+			loopo1:{
+				c = fgetc(file);
+				if(c == '%'){
+					if(dataCurrent - dataStart >= 3){
+						*(soundNameRight + 0) = *(dataCurrent - 3);
+					}
+					if(dataCurrent - dataStart >= 2){
+						*(soundNameRight + 1) = *(dataCurrent - 2);
+					}
+					*(soundNameRight + 2) = *(dataCurrent - 1);
+					jmp loopo1Exit;
+				}
+				*dataCurrent = c;
+				if(inc dataCurrent < dataWall){
+					if(dataCurrent >= dataWall){
+						const uint offset = dataCurrent - dataStart;
+						dataSize += 20;
+						dataStart = realloc(dataStart, dataSize * sizeof(char));
+						dataCurrent = dataStart + offset;
+						dataWall = dataStart + dataSize;
+					}
+					jmp loopo1;
+				}
+			}
+			loopo1Exit:{}
+
+
+
+
+
+
+
+
+
+			free(dataStart);
+
+
+
+
+
+
+
+
+
+			if(pclose(file) == PCLOSE_FAILURE){
+				printError("could not close sound information file");
+			}
+		}else{
+			printError("could not open sound information file");
+		}
+
+
+
+		#undef  PCLOSE_FAILURE
+
+
+
+
+
+
+
+
+
+		if(muteStatus){
+			xcb_put_image_checked(connection, XCB_IMAGE_FORMAT_Z_PIXMAP, window, gc, baseMuted.width, baseMuted.height, baseMuted.x, baseMuted.y, 0, depth, baseMuted.size, (void *)baseMuted.data);
+			if(received) jmp prepareForAnotherExpose;
+		}else{
+			xcb_put_image_checked(connection, XCB_IMAGE_FORMAT_Z_PIXMAP, window, gc, base.width, base.height, base.x, base.y, 0, depth, base.size, (void *)base.data);
+			if(received) jmp prepareForAnotherExpose;
+		}
+
+
+
+
+
+
+
+
+
+		xcb_image_text_8_checked(connection, LITERAL_LENGTH(left), window, gc, fontX + 10, fontY + 10 + 2 * fontHeight, left);
+		if(received) jmp prepareForAnotherExpose;
+
+		xcb_image_text_8_checked(connection, 4, window, gc, fontX + 10, fontY + 10 + 3 * fontHeight, soundNameLeft);
+		if(received) jmp prepareForAnotherExpose;
+
+
+
+
+
+
+
+
+
+		xcb_image_text_8_checked(connection, LITERAL_LENGTH(right), window, gc, fontX + 10, fontY + 10 + 4 * fontHeight, right);
+		if(received) jmp prepareForAnotherExpose;
+
+		xcb_image_text_8_checked(connection, 4, window, gc, fontX + 10, fontY + 10 + 5 * fontHeight, soundNameRight);
+		if(received) jmp prepareForAnotherExpose;
+
+
+
+
+
+
+
+
+
+		xcb_flush(connection);
+		if(received) jmp prepareForAnotherExpose;
+		sleep(duration);
+		if(received) jmp prepareForAnotherExpose;
+
+
+
+
+
+
+
+
+
+		xcb_unmap_window(connection, window);
+		xcb_flush(connection);
+
+
+
+		jmp eventLoop;
+	}
+	prepareForAnotherExpose:{
+		xcb_flush(connection);
+		received = false;
+		jmp exposeEvent;
+	}
+
+
+
+
+
+
+
+
+
+	unexpectedEvent:{
+		printUnexpectedEvent();
+		jmp eventLoop;
+	}
+
+
+
+
+
+
+
+
+
+	eventLoopExit:{
+		free(event);
+		event = NULL;
+		jmp mainEmergencyExit;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	mainEmergencyExit:{
+		xcb_disconnect(connection);
+		connection = NULL;
+		ret 0;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PRINTERROR_DEC{
+	if(openErrorStream()){
+		fprintf(errorStream, "%s: %s\n", programName, string);
+		closeErrorStream();
+	}
+	ret;
+}
+OPENERRORSTREAM_DEC{
+	ret !mustOpenErrorStream or (errorStream = fopen(errorPath, "a"));
+}
+CLOSEERRORSTREAM_DEC{
+	if(mustOpenErrorStream and errorStream){
+		fclose(errorStream);
+		errorStream = NULL;
+	}
+	ret;
+}
+PRINTCONNECTIONERROR_DEC{
+	if(openErrorStream()){
+		#define PRINTCONNECTIONERROR_ERROR /*--*/ xcb_connection_has_error(connection)
+		#define PRINTCONNECTIONERROR_STREAM /*-*/ errorStream
+		#include "xcb/printConnectionError.hold"
+		closeErrorStream();
+	}
+	ret;
+}
+REQUESTCHECK_DEC{
+	if(!(genericError = xcb_request_check(connection, c))){
+		ret;
+	}
+	if(errorCode != XCB_NONE and (*genericError).error_code == errorCode){
+		printError(errorMessage);
+	}else{
+		printXCBError();
+	}
+	free(genericError);
+	genericError = NULL;
+	ret;
+}
+#if DEBUG
+PRINTEVENT_DEC{
+	#define PRINTEVENT_EVENT /*--*/ event
+	#define PRINTEVENT_STREAM /*-*/ stdout
+	#include "xcb/printEvent.hold"
+	ret;
+}
+#endif
+PRINTXCBERROR_DEC{
+	if(openErrorStream()){
+		#define PRINTXCBERROR_ERROR /*--*/ genericError
+		#define PRINTXCBERROR_STREAM /*-*/ errorStream
+		#include "xcb/printXCBError.hold"
+		closeErrorStream();
+	}
+	ret;
+}
+#if DEBUG
+PRINTUNEXPECTEDEVENT_DEC{
+	if(openErrorStream()){
+		#define PRINTUNEXPECTEDEVENT_EVENT /*--*/ event
+		#define PRINTUNEXPECTEDEVENT_STREAM /*-*/ errorStream
+		#include "xcb/printUnexpectedEvent.hold"
+		closeErrorStream();
+	}
+	ret;
+}
+#endif
