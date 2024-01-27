@@ -28,7 +28,7 @@ DEBUG=true
 
 asm="output/asm"
 files=""
-programName="microsound"
+programName="sound_sink_monitor"
 
 compileFile(){
 	gcc -x c \
@@ -38,6 +38,8 @@ compileFile(){
 		-Waddress -Warray-bounds=1 -Wbool-compare -Wbool-operation -Wchar-subscripts -Wduplicate-decl-specifier -Wformat -Wformat-overflow -Wformat-truncation -Wint-in-bool-context -Wimplicit -Wimplicit-int -Wimplicit-function-declaration -Winit-self -Wlogical-not-parentheses -Wmain -Wmaybe-uninitialized -Wmemset-elt-size -Wmemset-transposed-args -Wmissing-attributes -Wmissing-braces -Wmultistatement-macros -Wnarrowing -Wnonnull -Wnonnull-compare -Wopenmp-simd -Wparentheses -Wpointer-sign -Wrestrict -Wreturn-type -Wsequence-point -Wsign-compare -Wsizeof-pointer-div -Wsizeof-pointer-memaccess -Wstrict-aliasing -Wstrict-overflow=1 -Wswitch -Wtautological-compare -Wtrigraphs -Wuninitialized -Wunknown-pragmas -Wunused-function -Wunused-label -Wunused-value -Wunused-variable -Wvolatile-register-var \
 		-Wclobbered -Wcast-function-type -Wempty-body -Wignored-qualifiers -Wimplicit-fallthrough=3 -Wmissing-field-initializers -Wmissing-parameter-type -Wold-style-declaration -Woverride-init -Wsign-compare -Wtype-limits -Wuninitialized -Wshift-negative-value -Wunused-parameter -Wunused-but-set-parameter \
 		-Wpedantic \
+		-pthread \
+		-lpulse \
 		-lxcb \
 		-lxcb-randr \
 		-o "$asm/$1.s" "source/$1.cold"
@@ -55,7 +57,7 @@ if [ -f compile.sh ]; then
 	mkdir output $asm
 	if [ -d $asm ]; then
 		compileFile $programName
-		gcc $files -lxcb -lxcb-randr -o output/$programName
+		gcc $files -pthread -lpulse -lxcb -lxcb-randr -o output/$programName
 		if ! $DEBUG; then
 			rm -r $asm
 		fi
