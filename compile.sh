@@ -28,7 +28,7 @@ DEBUG=true
 
 asm="output/asm"
 files=""
-programName="sound_sink_monitor"
+programName="microsound"
 
 compileFile(){
 	gcc -x c \
