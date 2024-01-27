@@ -1,6 +1,5 @@
 /*!
 	add multi-monitor support
-	add argument parsing
 
 	spawn window in (
 		  set_of_windows
@@ -8,6 +7,16 @@
 		| pointer_window_dynamic
 	)
 */
+
+/*!
+	do something about lowering minimum sound or raising maximum sound: pulseaudio won't send message despite subscription
+*/
+
+
+
+
+
+
 
 
 
@@ -35,13 +44,51 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. */
 
-#define _POSIX_C_SOURCE /*-*/ 200112L
+/*!{*/
+	#define inline
+	#include <pthread.h>
+	#include <stdint.h>
+	#include <stdio.h>
+	#include <pulse/pulseaudio.h>
+	#include "cold/cold.hold"
+/*!}*/
+
+/*!{*/
+	#define PULSEAUDIOSTART() /*---*/ local void *pulseaudioStart(void *arg)
+	#define GETSTATE() /*----------*/ local void  getState(pa_context *const context, void *const userdata)
+	#define SUBSCRIBECALLBACK() /*-*/ local void  subscribeCallback(pa_context *const context, pa_subscription_event_type_t event, uint32 idx, void *const userdata)
+	#define GETSINKNAME() /*-------*/ local void  getSinkName(pa_context *const context, const pa_server_info *const si, void *const userdata)
+	#define GETSINKINFO() /*-------*/ local void  getSinkInfo(pa_context *const context, const pa_sink_info *const si, int eol, void *const userdata)
+/*!}*/
+
+/*!{*/
+	pthread_t /*-*/ pulseaudioThread;
+
+	pa_mainloop * /*-----*/ mainloop;
+	pa_mainloop_api * /*-*/ api;
+	pa_context * /*------*/ context;
+
+	const char * /*------*/ defaultSinkName;
+
+	uint /*--------------*/ lastVolume;
+	int /*---------------*/ volume = -1;
+	bool /*--------------*/ mute;
+/*!}*/
+
+/*!{*/
+	PULSEAUDIOSTART();
+	GETSTATE();
+	SUBSCRIBECALLBACK();
+	GETSINKNAME();
+	GETSINKINFO();
+/*!}*/
 
 /*!includes:{*/
 	#include <signal.h>
 	#include <stdint.h>
 	#include <stdio.h>
 	#include <stdlib.h>
+	#include <string.h>
 	#include <unistd.h>
 	#include <xcb/randr.h>
 	#include <xcb/xcb.h>
@@ -159,7 +206,10 @@ SOFTWARE. */
 
 #define LITERAL_LENGTH(l) /*-*/ (sizeof(l) - 1)
 
+time_t seconds;
+
 QUIT_DEC{
+	ret;
 	if(signal != SIGUSR1){
 		printError("ignoring received signal, not SIGUSR1");
 		ret;
@@ -295,6 +345,387 @@ uint32 *pixelRStart;
 uint32 *pixelGStart;
 uint32 *pixelBStart;
 
+void doubleBoxBlur(const int width, const int height, uint32 *originalData, uint32 *intermediateData, uint32 *destinationData, const int boxSize);
+
+uint32 *intermediateData;
+uint32 *data;
+
+Texture case0;
+Texture case1;
+Texture case2;
+Texture case3;
+Texture wallpaper;
+
+int main(const int argumentAmount, const char *const *argument){
+	(void)argumentAmount;
+
+	kernelColumnRStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
+	kernelColumnGStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
+	kernelColumnBStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
+
+	pixelRStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
+	pixelGStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
+	pixelBStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
+
+	pthread_create(&pulseaudioThread, NULL, pulseaudioStart, NULL);
+
+	jmp main;
+	main:{
+		duration = 2;
+		received = false;
+		foreground = 0xFF292929;
+		background = 0xFFE5E5E3;
+/*!
+		case0 = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
+		case1 = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
+		case2 = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
+		case3 = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
+		{
+			Texture barsUnfilled = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
+			realApplyTexture(barsUnfilled, case0);
+			realApplyTexture(barsUnfilled, case1);
+			realApplyTexture(barsUnfilled, case2);
+			realApplyTexture(barsUnfilled, case3);
+			free(barsUnfilled.data);
+		}
+		{
+			Texture soundBox = loadTexture("/home/steven/Documents/microsound/assets/modern/sound_box.bmp");
+			realApplyTexture(soundBox, case0);
+			realApplyTexture(soundBox, case1);
+			realApplyTexture(soundBox, case2);
+			realApplyTexture(soundBox, case3);
+			free(soundBox.data);
+		}
+		{
+			Texture mute = loadTexture("/home/steven/Documents/microsound/assets/modern/mute.bmp");
+			realApplyTexture(mute, case1);
+			free(mute.data);
+		}
+		{
+			Texture plus = loadTexture("/home/steven/Documents/microsound/assets/modern/plus.bmp");
+			realApplyTexture(plus, case2);
+			free(plus.data);
+		}
+		{
+			Texture minus = loadTexture("/home/steven/Documents/microsound/assets/modern/minus.bmp");
+			realApplyTexture(minus, case3);
+			free(minus.data);
+		}
+*/
+		case0     = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
+		case1     = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
+		wallpaper = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
+		{
+			Texture soundBox = loadTexture("/home/steven/Documents/microsound/assets/modern/sound_box.bmp");
+			realApplyTexture(soundBox, case0);
+			realApplyTexture(soundBox, case1);
+			free(soundBox.data);
+		}
+		{
+			Texture mute = loadTexture("/home/steven/Documents/microsound/assets/modern/mute.bmp");
+			realApplyTexture(mute, case1);
+			free(mute.data);
+		}
+		width  = case0.width;
+		height = case0.height;
+		x      = (1920 - width ) / 2;
+		y      = (1080 - height) / 2 + height;
+		intermediateData = malloc(width * height * sizeof(uint32));
+		data             = malloc(width * height * sizeof(uint32));
+		jmp setPrimaryGlobals;
+	}
+	setPrimaryGlobals:{
+		programName /*---------*/ = *argument;
+		errorPath /*-----------*/ = NULL;
+		connectionName /*------*/ = NULL;
+		mustOpenErrorStream /*-*/ = false;
+		errorStream /*---------*/ = DefaultErrorStream;
+		connection /*----------*/ = NULL;
+		genericError /*--------*/ = NULL;
+		event /*---------------*/ = NULL;
+		agp0 /*----------------*/ = NULL;
+		quitMessage /*---------*/ = NULL;
+		jmp establishServerConnection;
+	}
+	establishServerConnection:{
+		#define ESTABLISHSERVERCONNECTION_CONNECTION /*-----*/ connection
+		#define ESTABLISHSERVERCONNECTION_CONNECTIONNAME /*-*/ connectionName
+		#define ESTABLISHSERVERCONNECTION_SCREEN /*---------*/ screen
+		#include "xcb/establishServerConnection.hold"
+		switch xcb_connection_has_error(connection) over
+			to XCB_NONE: /*------------*/ /*-----------------------------------------------------------------*/ jmp generateIDs;
+			to XCB_CONN_CLOSED_PARSE_ERR: printError(connectionName? "invalid server name" : "no server name"); jmp mainEmergencyExit;
+			off: /*--------------------*/ printConnectionError(); /*-----------------------------------------*/ jmp mainEmergencyExit;
+		end
+	}
+	generateIDs:{
+		font /*-----*/ = xcb_generate_id(connection);
+		gc /*-------*/ = xcb_generate_id(connection);
+		window /*---*/ = xcb_generate_id(connection);
+		colormap /*-*/ = xcb_generate_id(connection);
+		jmp setupScreenProfile;
+	}
+	setupScreenProfile:{
+		#define SETUPSCREENPROFILE_VISUAL /*-*/ visual
+		#define SETUPSCREENPROFILE_DEPTH /*--*/ depth
+		#include "xcb/setupScreenProfile.hold"
+		jmp createWindow;
+	}
+	createWindow:{
+		struct{
+			uint32 /*---------*/ backgroundColor;
+			uint32 /*---------*/ borderColor;
+			bool /*-----------*/ overrideRedirect;
+			uint32 /*---------*/ eventMask;
+			xcb_colormap_t /*-*/ colormap;
+		} attribute;
+		requestCheck(xcb_create_colormap_checked(connection, XCB_COLORMAP_ALLOC_NONE, colormap, (*screen).root, visual), "could not create colormap", XCB_NONE);
+		attribute.backgroundColor /*--*/ = 0x00000000;
+		attribute.borderColor /*------*/ = 0x00000000;
+		attribute.overrideRedirect /*-*/ = true;
+		attribute.eventMask /*--------*/ = XCB_EVENT_MASK_EXPOSURE;
+		attribute.colormap /*---------*/ = colormap;
+		requestCheck(xcb_create_window_checked(connection, depth, window, (*screen).root, x, y, width, height, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, visual, XCB_CW_BACK_PIXEL | XCB_CW_BORDER_PIXEL | XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK | XCB_CW_COLORMAP, &attribute.backgroundColor), "could not create window", XCB_NONE);
+		{
+			uint32 gcData[3];
+			requestCheck(xcb_open_font_checked(connection, font, LITERAL_LENGTH("fixed"), "fixed"), "could not open font", XCB_NONE);
+			*(gcData + 0) = foreground;
+			*(gcData + 1) = background;
+			*(gcData + 2) = font;
+			requestCheck(xcb_create_gc_checked(connection, gc, window, XCB_GC_FOREGROUND | XCB_GC_BACKGROUND | XCB_GC_FONT, gcData), "could not create graphics context", XCB_NONE);
+		}
+		jmp acquireFontMetrics;
+	}
+	acquireFontMetrics:{
+		xcb_query_font_reply_t *reply = xcb_query_font_reply(connection, xcb_query_font(connection, font), NULL);
+		if(reply){
+			fontX      = (*reply).min_bounds.left_side_bearing;
+			fontY      = (*reply).font_ascent;
+			fontWidth  = (*reply).max_bounds.right_side_bearing - (*reply).min_bounds.left_side_bearing;
+			fontHeight = (*reply).max_bounds.ascent + (*reply).max_bounds.descent;
+			free(reply);
+			reply = NULL;
+		}
+		jmp expressErrors;
+	}
+	expressErrors:{
+		if(depth == 24){
+			printError("could not use 32-bit depth, using 24-bit depth instead");
+		}
+		jmp setupSignal;
+	}
+	setupSignal:{
+		#define Sigaction /*-*/ struct sigaction
+		Sigaction s;
+		s.sa_handler = quit;
+		s.sa_flags = 0;
+		sigemptyset(&s.sa_mask);
+		sigaction(SIGUSR1, &s, NULL);
+		jmp eventLoop;
+		#undef  Sigaction
+	}
+	eventLoop:{
+		xcb_flush(connection);
+		free(event);
+		event = NULL;
+		jmp waitForEventLoop;
+	}
+	waitForEventLoop:{
+		if((event = xcb_wait_for_event(connection))){
+			jmp switchEvents;
+		}
+		if(xcb_connection_has_error(connection)){
+			printConnectionError();
+			jmp eventLoopExit;
+		}
+		jmp waitForEventLoop;
+	}
+	switchEvents:{
+		#undef  XCB_RANDR_SCREEN_CHANGE_NOTIFY
+		#define XCB_ONE /*------------------------*/ (1)
+		#define XCB_RANDR_SCREEN_CHANGE_NOTIFY /*-*/ (89)
+		printEvent();
+		switch (*event).response_type & ~0x80 over
+			to XCB_NONE: /*-----------------------*/ jmp errorEvent;
+			to XCB_ONE: /*------------------------*/ jmp unexpectedEvent;
+			to XCB_KEY_PRESS: /*------------------*/ jmp unexpectedEvent;
+			to XCB_KEY_RELEASE: /*----------------*/ jmp unexpectedEvent;
+			to XCB_BUTTON_PRESS: /*---------------*/ jmp unexpectedEvent;
+			to XCB_BUTTON_RELEASE: /*-------------*/ jmp unexpectedEvent;
+			to XCB_MOTION_NOTIFY: /*--------------*/ jmp unexpectedEvent;
+			to XCB_ENTER_NOTIFY: /*---------------*/ jmp unexpectedEvent;
+			to XCB_LEAVE_NOTIFY: /*---------------*/ jmp unexpectedEvent;
+			to XCB_FOCUS_IN: /*-------------------*/ jmp unexpectedEvent;
+			to XCB_FOCUS_OUT: /*------------------*/ jmp unexpectedEvent;
+			to XCB_KEYMAP_NOTIFY: /*--------------*/ jmp unexpectedEvent;
+			to XCB_EXPOSE: /*---------------------*/ jmp exposeEvent;
+			to XCB_GRAPHICS_EXPOSURE: /*----------*/ jmp unexpectedEvent;
+			to XCB_NO_EXPOSURE: /*----------------*/ jmp unexpectedEvent;
+			to XCB_VISIBILITY_NOTIFY: /*----------*/ jmp unexpectedEvent;
+			to XCB_CREATE_NOTIFY: /*--------------*/ jmp unexpectedEvent;
+			to XCB_DESTROY_NOTIFY: /*-------------*/ jmp unexpectedEvent;
+			to XCB_UNMAP_NOTIFY: /*---------------*/ jmp unexpectedEvent;
+			to XCB_MAP_NOTIFY: /*-----------------*/ jmp unexpectedEvent;
+			to XCB_MAP_REQUEST: /*----------------*/ jmp unexpectedEvent;
+			to XCB_REPARENT_NOTIFY: /*------------*/ jmp unexpectedEvent;
+			to XCB_CONFIGURE_NOTIFY: /*-----------*/ jmp unexpectedEvent;
+			to XCB_CONFIGURE_REQUEST: /*----------*/ jmp unexpectedEvent;
+			to XCB_GRAVITY_NOTIFY: /*-------------*/ jmp unexpectedEvent;
+			to XCB_RESIZE_REQUEST: /*-------------*/ jmp unexpectedEvent;
+			to XCB_CIRCULATE_NOTIFY: /*-----------*/ jmp unexpectedEvent;
+			to XCB_CIRCULATE_REQUEST: /*----------*/ jmp unexpectedEvent;
+			to XCB_PROPERTY_NOTIFY: /*------------*/ jmp unexpectedEvent;
+			to XCB_SELECTION_CLEAR: /*------------*/ jmp unexpectedEvent;
+			to XCB_SELECTION_REQUEST: /*----------*/ jmp unexpectedEvent;
+			to XCB_SELECTION_NOTIFY: /*-----------*/ jmp unexpectedEvent;
+			to XCB_COLORMAP_NOTIFY: /*------------*/ jmp unexpectedEvent;
+			to XCB_CLIENT_MESSAGE: /*-------------*/ jmp unexpectedEvent;
+			to XCB_MAPPING_NOTIFY: /*-------------*/ jmp eventLoop;
+			to XCB_GE_GENERIC: /*-----------------*/ jmp unexpectedEvent;
+			to XCB_RANDR_SCREEN_CHANGE_NOTIFY: /*-*/ jmp unexpectedEvent;
+			off: /*-------------------------------*/ jmp unexpectedEvent;
+		end
+		#undef  XCB_RANDR_SCREEN_CHANGE_NOTIFY
+		#undef  XCB_ONE
+	}
+	errorEvent:{
+		genericError = (void *)event;
+		printXCBError();
+		genericError = NULL;
+		jmp eventLoop;
+	}
+	exposeEvent:{
+		char soundNameLeft[256];
+		char soundNameRight[256];
+		exposeEventInner:{
+			Texture t;
+			xcb_get_image_reply_t *reply;
+			t.width = width;
+			t.height = height;
+			t.size = width * height * 4;
+			t.data = data;
+			reply = xcb_get_image_reply(connection, xcb_get_image(connection, XCB_IMAGE_FORMAT_Z_PIXMAP, (*screen).root, x, y - height, width, height, -1), NULL);
+			sprintf(soundNameLeft, "%d%%", volume);
+			sprintf(soundNameRight, "%d%%", volume);
+			if(reply){
+				doubleBoxBlur(width, height, (void *)xcb_get_image_data(reply), intermediateData, data, BOX_SIZE);
+				filterTexture(wallpaper, t);
+				free(reply);
+			}
+			if(mute){
+				realApplyTexture1(case1, t);
+				if(received) jmp prepareForAnotherExpose;
+			}else{
+				realApplyTexture1(case0, t);
+				if(received) jmp prepareForAnotherExpose;
+			}
+			xcb_put_image_checked(connection, XCB_IMAGE_FORMAT_Z_PIXMAP, window, gc, width, height, 0, 0, 0, depth, t.size, (void *)t.data);
+			xcb_image_text_8_checked(connection, LITERAL_LENGTH(left), window, gc, fontX + 10, fontY + 10 + 2 * fontHeight, left);
+			if(received) jmp prepareForAnotherExpose;
+			xcb_image_text_8_checked(connection, strlen(soundNameLeft), window, gc, fontX + 10, fontY + 10 + 3 * fontHeight, soundNameLeft);
+			if(received) jmp prepareForAnotherExpose;
+			xcb_image_text_8_checked(connection, LITERAL_LENGTH(right), window, gc, fontX + 10, fontY + 10 + 4 * fontHeight, right);
+			if(received) jmp prepareForAnotherExpose;
+			xcb_image_text_8_checked(connection, strlen(soundNameRight), window, gc, fontX + 10, fontY + 10 + 5 * fontHeight, soundNameRight);
+			if(received) jmp prepareForAnotherExpose;
+			xcb_flush(connection);
+			if(time(NULL) - seconds >= duration){
+				if(received) jmp prepareForAnotherExpose;
+				if(received) jmp prepareForAnotherExpose;
+				xcb_unmap_window(connection, window);
+				xcb_flush(connection);
+				jmp eventLoop;
+			}
+		}
+		jmp exposeEventInner;
+	}
+	prepareForAnotherExpose:{
+		xcb_flush(connection);
+		received = false;
+		jmp exposeEvent;
+	}
+	unexpectedEvent:{
+		printUnexpectedEvent();
+		jmp eventLoop;
+	}
+	eventLoopExit:{
+		free(event);
+		event = NULL;
+		jmp mainEmergencyExit;
+	}
+	mainEmergencyExit:{
+		xcb_disconnect(connection);
+		connection = NULL;
+		ret 0;
+	}
+}
+PRINTERROR_DEC{
+	if(openErrorStream()){
+		fprintf(errorStream, "%s: %s\n", programName, string);
+		closeErrorStream();
+	}
+	ret;
+}
+OPENERRORSTREAM_DEC{
+	ret !mustOpenErrorStream or (errorStream = fopen(errorPath, "a"));
+}
+CLOSEERRORSTREAM_DEC{
+	if(mustOpenErrorStream and errorStream){
+		fclose(errorStream);
+		errorStream = NULL;
+	}
+	ret;
+}
+PRINTCONNECTIONERROR_DEC{
+	if(openErrorStream()){
+		#define PRINTCONNECTIONERROR_ERROR /*--*/ xcb_connection_has_error(connection)
+		#define PRINTCONNECTIONERROR_STREAM /*-*/ errorStream
+		#include "xcb/printConnectionError.hold"
+		closeErrorStream();
+	}
+	ret;
+}
+REQUESTCHECK_DEC{
+	if(!(genericError = xcb_request_check(connection, c))){
+		ret;
+	}
+	if(errorCode != XCB_NONE and (*genericError).error_code == errorCode){
+		printError(errorMessage);
+	}else{
+		printXCBError();
+	}
+	free(genericError);
+	genericError = NULL;
+	ret;
+}
+#if DEBUG
+PRINTEVENT_DEC{
+	#define PRINTEVENT_EVENT /*--*/ event
+	#define PRINTEVENT_STREAM /*-*/ stdout
+	#include "xcb/printEvent.hold"
+	ret;
+}
+#endif
+PRINTXCBERROR_DEC{
+	if(openErrorStream()){
+		#define PRINTXCBERROR_ERROR /*--*/ genericError
+		#define PRINTXCBERROR_STREAM /*-*/ errorStream
+		#include "xcb/printXCBError.hold"
+		closeErrorStream();
+	}
+	ret;
+}
+#if DEBUG
+PRINTUNEXPECTEDEVENT_DEC{
+	if(openErrorStream()){
+		#define PRINTUNEXPECTEDEVENT_EVENT /*--*/ event
+		#define PRINTUNEXPECTEDEVENT_STREAM /*-*/ errorStream
+		#include "xcb/printUnexpectedEvent.hold"
+		closeErrorStream();
+	}
+	ret;
+}
+#endif
 void doubleBoxBlur(const int width, const int height, uint32 *originalData, uint32 *intermediateData, uint32 *destinationData, const int boxSize){
 	const int divisor = boxSize * boxSize;
 	const int boxDistanceFromZero = boxSize >> 1;
@@ -556,473 +987,118 @@ void doubleBoxBlur(const int width, const int height, uint32 *originalData, uint
 	}
 	ret;
 }
-
-
-
-
-
-
-
-
-
-Texture case0;
-Texture case1;
-Texture case2;
-Texture case3;
-Texture wallpaper;
-
-int main(const int argumentAmount, const char *const *argument){
-	uint32 *intermediateData;
-	uint32 *data;
-	(void)argumentAmount;
-
-	kernelColumnRStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
-	kernelColumnGStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
-	kernelColumnBStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
-
-	pixelRStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
-	pixelGStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
-	pixelBStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
-
-	jmp main;
-	main:{
-		duration = 2;
-		received = false;
-		foreground = 0xFF292929;
-		background = 0xFFE5E5E3;
-/*!
-		case0 = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
-		case1 = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
-		case2 = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
-		case3 = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
-		{
-			Texture barsUnfilled = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
-			realApplyTexture(barsUnfilled, case0);
-			realApplyTexture(barsUnfilled, case1);
-			realApplyTexture(barsUnfilled, case2);
-			realApplyTexture(barsUnfilled, case3);
-			free(barsUnfilled.data);
+PULSEAUDIOSTART(){
+	(void)arg;
+	mainloop = pa_mainloop_new();
+	api = pa_mainloop_get_api(mainloop);
+	context = pa_context_new(api, "microsound");
+	{
+		if(pa_context_connect(context, NULL, PA_CONTEXT_NOFLAGS, NULL) == -1){
+			fprintf(stdout, "bad connect\n");
 		}
-		{
-			Texture soundBox = loadTexture("/home/steven/Documents/microsound/assets/modern/sound_box.bmp");
-			realApplyTexture(soundBox, case0);
-			realApplyTexture(soundBox, case1);
-			realApplyTexture(soundBox, case2);
-			realApplyTexture(soundBox, case3);
-			free(soundBox.data);
+	}
+	{
+		#define PA_CONTEXT_NONE /*-*/ (0)
+		uint ready = PA_CONTEXT_NONE;
+		pa_context_set_state_callback(context, getState, &ready);
+		readyUp:{
+			pa_mainloop_prepare(mainloop, -1);
+			pa_mainloop_poll(mainloop);
+			pa_mainloop_dispatch(mainloop);
+			switch ready over
+				to PA_CONTEXT_NONE: /*-------*/ /*----------------------------------*/ jmp readyUp;
+				to PA_CONTEXT_READY: /*------*/ /*----------------------------------*/ brk;
+				to PA_CONTEXT_TERMINATED: /*-*/ fprintf(stdout, "terminated\n"); /*-*/ jmp emergencyExit;
+				off: /*----------------------*/ fprintf(stdout, "failed\n"); /*-----*/ jmp emergencyExit;
+			end
 		}
-		{
-			Texture mute = loadTexture("/home/steven/Documents/microsound/assets/modern/mute.bmp");
-			realApplyTexture(mute, case1);
-			free(mute.data);
-		}
-		{
-			Texture plus = loadTexture("/home/steven/Documents/microsound/assets/modern/plus.bmp");
-			realApplyTexture(plus, case2);
-			free(plus.data);
-		}
-		{
-			Texture minus = loadTexture("/home/steven/Documents/microsound/assets/modern/minus.bmp");
-			realApplyTexture(minus, case3);
-			free(minus.data);
-		}
-*/
-		case0     = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
-		case1     = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
-		wallpaper = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
-		{
-			Texture soundBox = loadTexture("/home/steven/Documents/microsound/assets/modern/sound_box.bmp");
-			realApplyTexture(soundBox, case0);
-			realApplyTexture(soundBox, case1);
-			free(soundBox.data);
-		}
-		{
-			Texture mute = loadTexture("/home/steven/Documents/microsound/assets/modern/mute.bmp");
-			realApplyTexture(mute, case1);
-			free(mute.data);
-		}
-		width  = case0.width;
-		height = case0.height;
-		x      = (1920 - width ) / 2;
-		y      = (1080 - height) / 2 + height;
-		intermediateData = malloc(width * height * sizeof(uint32));
-		data             = malloc(width * height * sizeof(uint32));
-		jmp setPrimaryGlobals;
+		#undef  PA_CONTEXT_NONE
 	}
-	setPrimaryGlobals:{
-		programName /*---------*/ = *argument;
-		errorPath /*-----------*/ = NULL;
-		connectionName /*------*/ = NULL;
-		mustOpenErrorStream /*-*/ = false;
-		errorStream /*---------*/ = DefaultErrorStream;
-		connection /*----------*/ = NULL;
-		genericError /*--------*/ = NULL;
-		event /*---------------*/ = NULL;
-		agp0 /*----------------*/ = NULL;
-		quitMessage /*---------*/ = NULL;
-		jmp establishServerConnection;
+	{
+		pa_operation *operation = pa_context_subscribe(context, PA_SUBSCRIPTION_MASK_SINK, NULL, NULL);
+		pa_context_set_subscribe_callback(context, subscribeCallback, NULL);
+		pa_operation_unref(operation);
 	}
-	establishServerConnection:{
-		#define ESTABLISHSERVERCONNECTION_CONNECTION /*-----*/ connection
-		#define ESTABLISHSERVERCONNECTION_CONNECTIONNAME /*-*/ connectionName
-		#define ESTABLISHSERVERCONNECTION_SCREEN /*---------*/ screen
-		#include "xcb/establishServerConnection.hold"
-		switch xcb_connection_has_error(connection) over
-			to XCB_NONE: /*------------*/ /*-----------------------------------------------------------------*/ jmp generateIDs;
-			to XCB_CONN_CLOSED_PARSE_ERR: printError(connectionName? "invalid server name" : "no server name"); jmp mainEmergencyExit;
-			off: /*--------------------*/ printConnectionError(); /*-----------------------------------------*/ jmp mainEmergencyExit;
-		end
+	{
+		pa_operation *operation = pa_context_get_server_info(context, getSinkName, NULL);
+		pa_operation_unref(operation);
 	}
-	generateIDs:{
-		font /*-----*/ = xcb_generate_id(connection);
-		gc /*-------*/ = xcb_generate_id(connection);
-		window /*---*/ = xcb_generate_id(connection);
-		colormap /*-*/ = xcb_generate_id(connection);
-		jmp setupScreenProfile;
+	{
+		pa_mainloop_run(mainloop, NULL);
 	}
-	setupScreenProfile:{
-		#define SETUPSCREENPROFILE_VISUAL /*-*/ visual
-		#define SETUPSCREENPROFILE_DEPTH /*--*/ depth
-		#include "xcb/setupScreenProfile.hold"
-		jmp createWindow;
-	}
-	createWindow:{
-		struct{
-			uint32 /*---------*/ backgroundColor;
-			uint32 /*---------*/ borderColor;
-			bool /*-----------*/ overrideRedirect;
-			uint32 /*---------*/ eventMask;
-			xcb_colormap_t /*-*/ colormap;
-		} attribute;
-		requestCheck(xcb_create_colormap_checked(connection, XCB_COLORMAP_ALLOC_NONE, colormap, (*screen).root, visual), "could not create colormap", XCB_NONE);
-		attribute.backgroundColor /*--*/ = 0x00000000;
-		attribute.borderColor /*------*/ = 0x00000000;
-		attribute.overrideRedirect /*-*/ = true;
-		attribute.eventMask /*--------*/ = XCB_EVENT_MASK_EXPOSURE;
-		attribute.colormap /*---------*/ = colormap;
-		requestCheck(xcb_create_window_checked(connection, depth, window, (*screen).root, x, y, width, height, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, visual, XCB_CW_BACK_PIXEL | XCB_CW_BORDER_PIXEL | XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK | XCB_CW_COLORMAP, &attribute.backgroundColor), "could not create window", XCB_NONE);
-		{
-			uint32 gcData[3];
-			requestCheck(xcb_open_font_checked(connection, font, LITERAL_LENGTH("fixed"), "fixed"), "could not open font", XCB_NONE);
-			*(gcData + 0) = foreground;
-			*(gcData + 1) = background;
-			*(gcData + 2) = font;
-			requestCheck(xcb_create_gc_checked(connection, gc, window, XCB_GC_FOREGROUND | XCB_GC_BACKGROUND | XCB_GC_FONT, gcData), "could not create graphics context", XCB_NONE);
-		}
-		jmp acquireFontMetrics;
-	}
-	acquireFontMetrics:{
-		xcb_query_font_reply_t *reply = xcb_query_font_reply(connection, xcb_query_font(connection, font), NULL);
-		if(reply){
-			fontX      = (*reply).min_bounds.left_side_bearing;
-			fontY      = (*reply).font_ascent;
-			fontWidth  = (*reply).max_bounds.right_side_bearing - (*reply).min_bounds.left_side_bearing;
-			fontHeight = (*reply).max_bounds.ascent + (*reply).max_bounds.descent;
-			free(reply);
-			reply = NULL;
-		}
-		jmp expressErrors;
-	}
-	expressErrors:{
-		if(depth == 24){
-			printError("could not use 32-bit depth, using 24-bit depth instead");
-		}
-		jmp setupSignal;
-	}
-	setupSignal:{
-		#define Sigaction /*-*/ struct sigaction
-		Sigaction s;
-		s.sa_handler = quit;
-		s.sa_flags = 0;
-		sigemptyset(&s.sa_mask);
-		sigaction(SIGUSR1, &s, NULL);
-		#undef  Sigaction
-		jmp eventLoop;
-	}
-	eventLoop:{
-		xcb_flush(connection);
-		free(event);
-		event = NULL;
-		jmp waitForEventLoop;
-	}
-	waitForEventLoop:{
-		if((event = xcb_wait_for_event(connection))){
-			jmp switchEvents;
-		}
-		if(xcb_connection_has_error(connection)){
-			printConnectionError();
-			jmp eventLoopExit;
-		}
-		jmp waitForEventLoop;
-	}
-	switchEvents:{
-		#undef  XCB_RANDR_SCREEN_CHANGE_NOTIFY
-		#define XCB_ONE /*------------------------*/ (1)
-		#define XCB_RANDR_SCREEN_CHANGE_NOTIFY /*-*/ (89)
-		printEvent();
-		switch (*event).response_type & ~0x80 over
-			to XCB_NONE: /*-----------------------*/ jmp errorEvent;
-			to XCB_ONE: /*------------------------*/ jmp unexpectedEvent;
-			to XCB_KEY_PRESS: /*------------------*/ jmp unexpectedEvent;
-			to XCB_KEY_RELEASE: /*----------------*/ jmp unexpectedEvent;
-			to XCB_BUTTON_PRESS: /*---------------*/ jmp unexpectedEvent;
-			to XCB_BUTTON_RELEASE: /*-------------*/ jmp unexpectedEvent;
-			to XCB_MOTION_NOTIFY: /*--------------*/ jmp unexpectedEvent;
-			to XCB_ENTER_NOTIFY: /*---------------*/ jmp unexpectedEvent;
-			to XCB_LEAVE_NOTIFY: /*---------------*/ jmp unexpectedEvent;
-			to XCB_FOCUS_IN: /*-------------------*/ jmp unexpectedEvent;
-			to XCB_FOCUS_OUT: /*------------------*/ jmp unexpectedEvent;
-			to XCB_KEYMAP_NOTIFY: /*--------------*/ jmp unexpectedEvent;
-			to XCB_EXPOSE: /*---------------------*/ jmp exposeEvent;
-			to XCB_GRAPHICS_EXPOSURE: /*----------*/ jmp unexpectedEvent;
-			to XCB_NO_EXPOSURE: /*----------------*/ jmp unexpectedEvent;
-			to XCB_VISIBILITY_NOTIFY: /*----------*/ jmp unexpectedEvent;
-			to XCB_CREATE_NOTIFY: /*--------------*/ jmp unexpectedEvent;
-			to XCB_DESTROY_NOTIFY: /*-------------*/ jmp unexpectedEvent;
-			to XCB_UNMAP_NOTIFY: /*---------------*/ jmp unexpectedEvent;
-			to XCB_MAP_NOTIFY: /*-----------------*/ jmp unexpectedEvent;
-			to XCB_MAP_REQUEST: /*----------------*/ jmp unexpectedEvent;
-			to XCB_REPARENT_NOTIFY: /*------------*/ jmp unexpectedEvent;
-			to XCB_CONFIGURE_NOTIFY: /*-----------*/ jmp unexpectedEvent;
-			to XCB_CONFIGURE_REQUEST: /*----------*/ jmp unexpectedEvent;
-			to XCB_GRAVITY_NOTIFY: /*-------------*/ jmp unexpectedEvent;
-			to XCB_RESIZE_REQUEST: /*-------------*/ jmp unexpectedEvent;
-			to XCB_CIRCULATE_NOTIFY: /*-----------*/ jmp unexpectedEvent;
-			to XCB_CIRCULATE_REQUEST: /*----------*/ jmp unexpectedEvent;
-			to XCB_PROPERTY_NOTIFY: /*------------*/ jmp unexpectedEvent;
-			to XCB_SELECTION_CLEAR: /*------------*/ jmp unexpectedEvent;
-			to XCB_SELECTION_REQUEST: /*----------*/ jmp unexpectedEvent;
-			to XCB_SELECTION_NOTIFY: /*-----------*/ jmp unexpectedEvent;
-			to XCB_COLORMAP_NOTIFY: /*------------*/ jmp unexpectedEvent;
-			to XCB_CLIENT_MESSAGE: /*-------------*/ jmp unexpectedEvent;
-			to XCB_MAPPING_NOTIFY: /*-------------*/ jmp eventLoop;
-			to XCB_GE_GENERIC: /*-----------------*/ jmp unexpectedEvent;
-			to XCB_RANDR_SCREEN_CHANGE_NOTIFY: /*-*/ jmp unexpectedEvent;
-			off: /*-------------------------------*/ jmp unexpectedEvent;
-		end
-		#undef  XCB_RANDR_SCREEN_CHANGE_NOTIFY
-		#undef  XCB_ONE
-	}
-	errorEvent:{
-		genericError = (void *)event;
-		printXCBError();
-		genericError = NULL;
-		jmp eventLoop;
-	}
-/*!
-	maybe: add a counter so that the first expose happens and only the next ones are interrupted
-*/
-	exposeEvent:{
-		#define PCLOSE_FAILURE /*-*/ (-1)
-
-		time_t seconds = time(NULL);
-		uint counter = 0;
-
-		bool muteStatus = false;
-		FILE *file;
-		char soundNameLeft[4];
-		char soundNameRight[4];
-		*(soundNameLeft + 0) = '0';
-		*(soundNameLeft + 1) = '0';
-		*(soundNameLeft + 2) = '0';
-		*(soundNameLeft + 3) = '%';
-		*(soundNameRight + 0) = '0';
-		*(soundNameRight + 1) = '0';
-		*(soundNameRight + 2) = '0';
-		*(soundNameRight + 3) = '%';
-		received = false;
-		if((file = popen("pactl get-sink-mute @DEFAULT_SINK@", "r"))){
-			fgetc(file);
-			fgetc(file);
-			fgetc(file);
-			fgetc(file);
-			fgetc(file);
-			fgetc(file);
-			if(fgetc(file) != 'n'){
-				muteStatus = true;
-			}
-			if(pclose(file) == PCLOSE_FAILURE){
-				printError("could not close mute information file");
-			}
-		}else{
-			printError("could not open mute information file");
-		}
-		if((file = popen("pactl get-sink-volume @DEFAULT_SINK@|head -1|awk \'{print$5\" \"$12}\'", "r"))){
-			char c;
-			char dataStart[256];
-			char *dataCurrent = dataStart;
-			char *dataWall = dataStart + 10;
-			loopo:{
-				c = fgetc(file);
-				if(c == '%'){
-					if(dataCurrent - dataStart >= 3){
-						*(soundNameLeft + 0) = *(dataCurrent - 3);
-					}
-					if(dataCurrent - dataStart >= 2){
-						*(soundNameLeft + 1) = *(dataCurrent - 2);
-					}
-					*(soundNameLeft + 2) = *(dataCurrent - 1);
-					jmp loopoExit;
-				}
-				*dataCurrent = c;
-				if(inc dataCurrent < dataWall){
-					jmp loopo;
-				}
-			}
-			loopoExit:{}
-			fgetc(file);
-			dataCurrent = dataStart;
-			loopo1:{
-				c = fgetc(file);
-				if(c == '%'){
-					if(dataCurrent - dataStart >= 3){
-						*(soundNameRight + 0) = *(dataCurrent - 3);
-					}
-					if(dataCurrent - dataStart >= 2){
-						*(soundNameRight + 1) = *(dataCurrent - 2);
-					}
-					*(soundNameRight + 2) = *(dataCurrent - 1);
-					jmp loopo1Exit;
-				}
-				*dataCurrent = c;
-				if(inc dataCurrent < dataWall){
-					jmp loopo1;
-				}
-			}
-			loopo1Exit:{}
-			if(pclose(file) == PCLOSE_FAILURE){
-				printError("could not close sound information file");
-			}
-		}else{
-			printError("could not open sound information file");
-		}
-		#undef  PCLOSE_FAILURE
-
-
-
-		exposeEventInner:{
-			Texture t;
-			t.width = width;
-			t.height = height;
-			t.size = width * height * 4;
-			t.data = data;
-			xcb_get_image_reply_t *const reply = xcb_get_image_reply(connection, xcb_get_image(connection, XCB_IMAGE_FORMAT_Z_PIXMAP, (*screen).root, x, y - height, width, height, -1), NULL);
-			if(reply){
-				doubleBoxBlur(width, height, (void *)xcb_get_image_data(reply), intermediateData, data, BOX_SIZE);
-				filterTexture(wallpaper, t);
-				free(reply);
-			}
-			if(muteStatus){
-				realApplyTexture1(case1, t);
-				if(received) jmp prepareForAnotherExpose;
-			}else{
-				realApplyTexture1(case0, t);
-				if(received) jmp prepareForAnotherExpose;
-			}
-			xcb_put_image_checked(connection, XCB_IMAGE_FORMAT_Z_PIXMAP, window, gc, width, height, 0, 0, 0, depth, t.size, (void *)t.data);
-			xcb_image_text_8_checked(connection, LITERAL_LENGTH(left), window, gc, fontX + 10, fontY + 10 + 2 * fontHeight, left);
-			if(received) jmp prepareForAnotherExpose;
-			xcb_image_text_8_checked(connection, 4, window, gc, fontX + 10, fontY + 10 + 3 * fontHeight, soundNameLeft);
-			if(received) jmp prepareForAnotherExpose;
-			xcb_image_text_8_checked(connection, LITERAL_LENGTH(right), window, gc, fontX + 10, fontY + 10 + 4 * fontHeight, right);
-			if(received) jmp prepareForAnotherExpose;
-			xcb_image_text_8_checked(connection, 4, window, gc, fontX + 10, fontY + 10 + 5 * fontHeight, soundNameRight);
-			if(received) jmp prepareForAnotherExpose;
-			xcb_flush(connection);
-			if(time(NULL) - seconds >= duration){
-				if(received) jmp prepareForAnotherExpose;
-				if(received) jmp prepareForAnotherExpose;
-				xcb_unmap_window(connection, window);
-				xcb_flush(connection);
-				jmp eventLoop;
-			}
-		}
-		jmp exposeEventInner;
-	}
-	prepareForAnotherExpose:{
-		xcb_flush(connection);
-		received = false;
-		jmp exposeEvent;
-	}
-	unexpectedEvent:{
-		printUnexpectedEvent();
-		jmp eventLoop;
-	}
-	eventLoopExit:{
-		free(event);
-		event = NULL;
-		jmp mainEmergencyExit;
-	}
-	mainEmergencyExit:{
-		xcb_disconnect(connection);
-		connection = NULL;
-		ret 0;
+	emergencyExit:{
+		pa_context_disconnect(context);
+		pa_context_unref(context);
+		pa_mainloop_free(mainloop);
+		ret NULL;
 	}
 }
-PRINTERROR_DEC{
-	if(openErrorStream()){
-		fprintf(errorStream, "%s: %s\n", programName, string);
-		closeErrorStream();
+GETSTATE(){
+	switch pa_context_get_state(context) over
+		to PA_CONTEXT_UNCONNECTED: /*--*/ /*--------------------------------------------*/ ret;
+		to PA_CONTEXT_CONNECTING: /*---*/ /*--------------------------------------------*/ ret;
+		to PA_CONTEXT_AUTHORIZING: /*--*/ /*--------------------------------------------*/ ret;
+		to PA_CONTEXT_SETTING_NAME: /*-*/ /*--------------------------------------------*/ ret;
+		to PA_CONTEXT_READY: /*--------*/ *(uint *)userdata = PA_CONTEXT_READY; /*------*/ ret;
+		to PA_CONTEXT_FAILED: /*-------*/ *(uint *)userdata = PA_CONTEXT_FAILED; /*-----*/ ret;
+		to PA_CONTEXT_TERMINATED: /*---*/ *(uint *)userdata = PA_CONTEXT_TERMINATED; /*-*/ ret;
+		off: /*------------------------*/ *(uint *)userdata = PA_CONTEXT_FAILED; /*-----*/ ret;
+	end
+}
+SUBSCRIBECALLBACK(){
+	(void)context;
+	(void)idx;
+	(void)userdata;
+	switch event over
+		to PA_SUBSCRIPTION_EVENT_SINK: /*----------*/ ret;
+		to PA_SUBSCRIPTION_EVENT_SOURCE: /*--------*/ ret;
+		to PA_SUBSCRIPTION_EVENT_SINK_INPUT: /*----*/ ret;
+		to PA_SUBSCRIPTION_EVENT_SOURCE_OUTPUT: /*-*/ ret;
+		to PA_SUBSCRIPTION_EVENT_MODULE: /*--------*/ ret;
+		to PA_SUBSCRIPTION_EVENT_CLIENT: /*--------*/ ret;
+		to PA_SUBSCRIPTION_EVENT_SAMPLE_CACHE: /*--*/ ret;
+		to PA_SUBSCRIPTION_EVENT_SERVER: /*--------*/ ret;
+		to PA_SUBSCRIPTION_EVENT_AUTOLOAD: /*------*/ ret;
+		to PA_SUBSCRIPTION_EVENT_CARD: /*----------*/ ret;
+		to PA_SUBSCRIPTION_EVENT_FACILITY_MASK: /*-*/ ret;
+		to PA_SUBSCRIPTION_EVENT_CHANGE: /*--------*/ brk;
+		to PA_SUBSCRIPTION_EVENT_REMOVE: /*--------*/ ret;
+		to PA_SUBSCRIPTION_EVENT_TYPE_MASK: /*-----*/ ret;
+		off: /*------------------------------------*/ ret;
+	end
+	{
+		pa_operation *operation = pa_context_get_sink_info_by_name(context, defaultSinkName, getSinkInfo, NULL);
+		pa_operation_unref(operation);
 	}
 	ret;
 }
-OPENERRORSTREAM_DEC{
-	ret !mustOpenErrorStream or (errorStream = fopen(errorPath, "a"));
-}
-CLOSEERRORSTREAM_DEC{
-	if(mustOpenErrorStream and errorStream){
-		fclose(errorStream);
-		errorStream = NULL;
-	}
+GETSINKNAME(){
+	(void)context;
+	(void)userdata;
+	defaultSinkName = (*si).default_sink_name;
 	ret;
 }
-PRINTCONNECTIONERROR_DEC{
-	if(openErrorStream()){
-		#define PRINTCONNECTIONERROR_ERROR /*--*/ xcb_connection_has_error(connection)
-		#define PRINTCONNECTIONERROR_STREAM /*-*/ errorStream
-		#include "xcb/printConnectionError.hold"
-		closeErrorStream();
-	}
-	ret;
-}
-REQUESTCHECK_DEC{
-	if(!(genericError = xcb_request_check(connection, c))){
+GETSINKINFO(){
+	(void)context;
+	(void)eol;
+	(void)userdata;
+	(void)si;
+	if(eol < 0){
+		fprintf(stdout, "get sink info problem\n");
 		ret;
 	}
-	if(errorCode != XCB_NONE and (*genericError).error_code == errorCode){
-		printError(errorMessage);
-	}else{
-		printXCBError();
+	if(!eol){
+		if(volume != -1){
+			lastVolume = volume;
+		}
+		mute = (*si).mute;
+		volume = (pa_cvolume_avg(&(*si).volume) + 1) * 100 / PA_VOLUME_NORM;
+		xcb_configure_window(connection, window, XCB_CONFIG_WINDOW_STACK_MODE, &stackMode);
+		xcb_map_window(connection, window);
+		xcb_flush(connection);
+		seconds = time(NULL);
 	}
-	free(genericError);
-	genericError = NULL;
+	/*! pa_mainloop_quit(mainloop, 0); */
+	
 	ret;
 }
-#if DEBUG
-PRINTEVENT_DEC{
-	#define PRINTEVENT_EVENT /*--*/ event
-	#define PRINTEVENT_STREAM /*-*/ stdout
-	#include "xcb/printEvent.hold"
-	ret;
-}
-#endif
-PRINTXCBERROR_DEC{
-	if(openErrorStream()){
-		#define PRINTXCBERROR_ERROR /*--*/ genericError
-		#define PRINTXCBERROR_STREAM /*-*/ errorStream
-		#include "xcb/printXCBError.hold"
-		closeErrorStream();
-	}
-	ret;
-}
-#if DEBUG
-PRINTUNEXPECTEDEVENT_DEC{
-	if(openErrorStream()){
-		#define PRINTUNEXPECTEDEVENT_EVENT /*--*/ event
-		#define PRINTUNEXPECTEDEVENT_STREAM /*-*/ errorStream
-		#include "xcb/printUnexpectedEvent.hold"
-		closeErrorStream();
-	}
-	ret;
-}
-#endif
