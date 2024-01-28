@@ -12,6 +12,14 @@
 	do something about lowering minimum sound or raising maximum sound: pulseaudio won't send message despite subscription
 */
 
+/*!
+	nothing is done when device is disconnected. if anything, an error will be thrown. connecting a device works properly.
+*/
+
+/*!
+	use a different method to measure time passed, preferably one that uses milliseconds rather than the system's seconds.
+*/
+
 
 
 
@@ -370,7 +378,7 @@ int main(const int argumentAmount, const char *const *argument){
 	pthread_create(&pulseaudioThread, NULL, pulseaudioStart, NULL);
 	jmp main;
 	main:{
-		duration = 2;
+		duration = 3;
 		foreground = 0xFF292929;
 		background = 0xFFE5E5E3;
 		case0      = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
