@@ -53,11 +53,24 @@ SOFTWARE. */
 	#include "cold/cold.hold"
 /*!}*/
 
+/*!includes:{*/
+	#include <stdint.h>
+	#include "cold/cold.hold"
+	#include <signal.h>
+	#include <stdio.h>
+	#include <stdlib.h>
+	#include <string.h>
+	#include <unistd.h>
+	#include <xcb/randr.h>
+	#include <xcb/xcb.h>
+/*!}*/
+
 /*!{*/
 	#define PULSEAUDIOSTART() /*---*/ local void *pulseaudioStart(void *arg)
 	#define GETSTATE() /*----------*/ local void  getState(pa_context *const context, void *const userdata)
 	#define SUBSCRIBECALLBACK() /*-*/ local void  subscribeCallback(pa_context *const context, pa_subscription_event_type_t event, uint32 idx, void *const userdata)
 	#define GETSINKNAME() /*-------*/ local void  getSinkName(pa_context *const context, const pa_server_info *const si, void *const userdata)
+	#define FIRSTGETSINKINFO() /*--*/ local void  firstGetSinkInfo(pa_context *const context, const pa_sink_info *const si, int eol, void *const userdata)
 	#define GETSINKINFO() /*-------*/ local void  getSinkInfo(pa_context *const context, const pa_sink_info *const si, int eol, void *const userdata)
 /*!}*/
 
@@ -68,9 +81,11 @@ SOFTWARE. */
 	pa_mainloop_api * /*-*/ api;
 	pa_context * /*------*/ context;
 
+	const char * /*------*/ oldDefaultSinkName;
 	const char * /*------*/ defaultSinkName;
 
-	int /*---------------*/ lastVolume = -1;
+	int /*---------------*/ oldVolume;
+	bool /*--------------*/ oldMute;
 	int /*---------------*/ volume;
 	bool /*--------------*/ mute;
 /*!}*/
@@ -80,19 +95,8 @@ SOFTWARE. */
 	GETSTATE();
 	SUBSCRIBECALLBACK();
 	GETSINKNAME();
+	FIRSTGETSINKINFO();
 	GETSINKINFO();
-/*!}*/
-
-/*!includes:{*/
-	#include <signal.h>
-	#include <stdint.h>
-	#include <stdio.h>
-	#include <stdlib.h>
-	#include <string.h>
-	#include <unistd.h>
-	#include <xcb/randr.h>
-	#include <xcb/xcb.h>
-	#include "cold/cold.hold"
 /*!}*/
 
 /*!user_defines:{*/
@@ -178,8 +182,8 @@ SOFTWARE. */
 	xcb_colormap_t /*--*/ colormap;
 	xVisual /*---------*/ visual;
 	xDepth /*----------*/ depth;
-	const char  left[] = "left";
-	const char right[] = "right";
+	/*!const char  left[] = "left";
+	const char right[] = "right";*/
 	const uint32 stackMode = XCB_STACK_MODE_ABOVE;
 	#undef  xWindow
 	#undef  xGenericEvent
@@ -294,6 +298,24 @@ void realApplyTexture1(Texture source, Texture destination){
 	}
 	ret;
 }
+void realApplyTexture1WithXY(int sourceX, int sourceY, int destinationX, int destinationY, Texture source, Texture destination){
+	uint32 *sourceData = (uint32 *)source.data;
+	uint32 *destinationData = (uint32 *)destination.data;
+	while(sourceX < source.width){
+		int sy = sourceY;
+		int dy = destinationY;
+		while(sy < source.height){
+			if(*(sourceData + sy * source.width + sourceX)){
+				*(destinationData + dy * destination.width + destinationX) = *(sourceData + sy * source.width + sourceX);
+			}
+			inc dy;
+			inc sy;
+		}
+		inc sourceX;
+		inc destinationX;
+	}
+	ret;
+}
 void filterTexture(Texture filter, Texture destination){
 	int x = 0;
 	while(x < filter.width){
@@ -340,39 +362,23 @@ Texture case0;
 Texture case1;
 Texture case2;
 Texture case3;
+Texture barOverlay;
 Texture wallpaper;
 
 int main(const int argumentAmount, const char *const *argument){
 	(void)argumentAmount;
-
-	kernelColumnRStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
-	kernelColumnGStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
-	kernelColumnBStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
-
-	pixelRStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
-	pixelGStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
-	pixelBStart = malloc(BOX_SIZE + 2 * 1920 * 1080 * sizeof(uint32));
-
 	pthread_create(&pulseaudioThread, NULL, pulseaudioStart, NULL);
-
 	jmp main;
 	main:{
 		duration = 2;
 		foreground = 0xFF292929;
 		background = 0xFFE5E5E3;
-/*!
-		case0 = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
-		case1 = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
-		case2 = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
-		case3 = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
-		{
-			Texture barsUnfilled = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
-			realApplyTexture(barsUnfilled, case0);
-			realApplyTexture(barsUnfilled, case1);
-			realApplyTexture(barsUnfilled, case2);
-			realApplyTexture(barsUnfilled, case3);
-			free(barsUnfilled.data);
-		}
+		case0      = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
+		case1      = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
+		case2      = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
+		case3      = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
+		barOverlay = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_filled.bmp");
+		wallpaper  = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
 		{
 			Texture soundBox = loadTexture("/home/steven/Documents/microsound/assets/modern/sound_box.bmp");
 			realApplyTexture(soundBox, case0);
@@ -383,36 +389,7 @@ int main(const int argumentAmount, const char *const *argument){
 		}
 		{
 			Texture mute = loadTexture("/home/steven/Documents/microsound/assets/modern/mute.bmp");
-			realApplyTexture(mute, case1);
-			free(mute.data);
-		}
-		{
-			Texture plus = loadTexture("/home/steven/Documents/microsound/assets/modern/plus.bmp");
-			realApplyTexture(plus, case2);
-			free(plus.data);
-		}
-		{
-			Texture minus = loadTexture("/home/steven/Documents/microsound/assets/modern/minus.bmp");
-			realApplyTexture(minus, case3);
-			free(minus.data);
-		}
-*/
-		case0     = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
-		case1     = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
-		case2     = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
-		case3     = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
-		wallpaper = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
-		{
-			Texture soundBox = loadTexture("/home/steven/Documents/microsound/assets/modern/sound_box.bmp");
-			realApplyTexture(soundBox, case0);
-			realApplyTexture(soundBox, case1);
-			realApplyTexture(soundBox, case2);
-			realApplyTexture(soundBox, case3);
-			free(soundBox.data);
-		}
-		{
-			Texture mute = loadTexture("/home/steven/Documents/microsound/assets/modern/mute.bmp");
-			realApplyTexture(mute, case1);
+			realApplyTexture(mute, case0);
 			free(mute.data);
 		}
 		{
@@ -431,6 +408,15 @@ int main(const int argumentAmount, const char *const *argument){
 		y      = (1080 - height) / 2 + height;
 		intermediateData = malloc(width * height * sizeof(uint32));
 		data             = malloc(width * height * sizeof(uint32));
+
+		kernelColumnRStart = malloc(BOX_SIZE + 2 * width * sizeof(uint32));
+		kernelColumnGStart = malloc(BOX_SIZE + 2 * width * sizeof(uint32));
+		kernelColumnBStart = malloc(BOX_SIZE + 2 * width * sizeof(uint32));
+
+		pixelRStart = malloc(BOX_SIZE + 2 * width * height * sizeof(uint32));
+		pixelGStart = malloc(BOX_SIZE + 2 * width * height * sizeof(uint32));
+		pixelBStart = malloc(BOX_SIZE + 2 * width * height * sizeof(uint32));
+
 		jmp setPrimaryGlobals;
 	}
 	setPrimaryGlobals:{
@@ -584,9 +570,10 @@ int main(const int argumentAmount, const char *const *argument){
 		jmp eventLoop;
 	}
 	exposeEvent:{
-		char soundNameLeft[256];
-		char soundNameRight[256];
+		/*!char soundNameLeft[256];
+		char soundNameRight[256];*/
 		exposeEventInner:{
+			uint localVolume = volume;
 			Texture t;
 			xcb_get_image_reply_t *reply;
 			t.width = width;
@@ -594,29 +581,40 @@ int main(const int argumentAmount, const char *const *argument){
 			t.size = width * height * 4;
 			t.data = data;
 			reply = xcb_get_image_reply(connection, xcb_get_image(connection, XCB_IMAGE_FORMAT_Z_PIXMAP, (*screen).root, x, y - height, width, height, -1), NULL);
-			sprintf(soundNameLeft, "%d%%", volume);
-			sprintf(soundNameRight, "%d%%", volume);
+
+			/*! sprintf(soundNameLeft, "%d%%", volume);
+			sprintf(soundNameRight, "%d%%", volume); */
+
+			if(localVolume > 100){
+				localVolume = 100;
+			}
 			if(reply){
 				doubleBoxBlur(width, height, (void *)xcb_get_image_data(reply), intermediateData, data, BOX_SIZE);
 				filterTexture(wallpaper, t);
 				free(reply);
 			}
-			if(mute){
-				realApplyTexture1(case1, t);
-			}else{
-				if(volume == lastVolume){
-					realApplyTexture1(case0, t);
-				}elif(volume > lastVolume){
-					realApplyTexture1(case2, t);
+			{
+				Texture texture;
+				if(mute){
+					texture = case0;
+				}elif(volume == oldVolume){
+					texture = case1;
+				}elif(volume > oldVolume){
+					texture = case2;
 				}else{
-					realApplyTexture1(case3, t);
+					texture = case3;
 				}
+				realApplyTexture1(texture, t);
+			}
+			{
+				const uint largePercentage = (100 - localVolume) * barOverlay.height / 100;
+				realApplyTexture1WithXY(0, largePercentage, 0, (t.height - barOverlay.height) / 2 + largePercentage, barOverlay, t);
 			}
 			xcb_put_image_checked(connection, XCB_IMAGE_FORMAT_Z_PIXMAP, window, gc, width, height, 0, 0, 0, depth, t.size, (void *)t.data);
-			xcb_image_text_8_checked(connection, LITERAL_LENGTH(left), window, gc, fontX + 10, fontY + 10 + 2 * fontHeight, left);
+			/*!xcb_image_text_8_checked(connection, LITERAL_LENGTH(left), window, gc, fontX + 10, fontY + 10 + 2 * fontHeight, left);
 			xcb_image_text_8_checked(connection, strlen(soundNameLeft), window, gc, fontX + 10, fontY + 10 + 3 * fontHeight, soundNameLeft);
 			xcb_image_text_8_checked(connection, LITERAL_LENGTH(right), window, gc, fontX + 10, fontY + 10 + 4 * fontHeight, right);
-			xcb_image_text_8_checked(connection, strlen(soundNameRight), window, gc, fontX + 10, fontY + 10 + 5 * fontHeight, soundNameRight);
+			xcb_image_text_8_checked(connection, strlen(soundNameRight), window, gc, fontX + 10, fontY + 10 + 5 * fontHeight, soundNameRight);*/
 			xcb_flush(connection);
 			if(time(NULL) - seconds >= duration){
 				xcb_unmap_window(connection, window);
@@ -1001,7 +999,7 @@ PULSEAUDIOSTART(){
 		pa_operation_unref(operation);
 	}
 	{
-		pa_operation *operation = pa_context_get_sink_info_by_name(context, defaultSinkName, getSinkInfo, NULL);
+		pa_operation *operation = pa_context_get_sink_info_by_name(context, defaultSinkName, firstGetSinkInfo, NULL);
 		pa_operation_unref(operation);
 	}
 	{
@@ -1035,30 +1033,33 @@ SUBSCRIBECALLBACK(){
 	(void)context;
 	(void)idx;
 	(void)userdata;
-	switch event over
-		to PA_SUBSCRIPTION_EVENT_SINK: /*----------*/ ret;
-		to PA_SUBSCRIPTION_EVENT_SOURCE: /*--------*/ ret;
-		to PA_SUBSCRIPTION_EVENT_SINK_INPUT: /*----*/ ret;
-		to PA_SUBSCRIPTION_EVENT_SOURCE_OUTPUT: /*-*/ ret;
-		to PA_SUBSCRIPTION_EVENT_MODULE: /*--------*/ ret;
-		to PA_SUBSCRIPTION_EVENT_CLIENT: /*--------*/ ret;
-		to PA_SUBSCRIPTION_EVENT_SAMPLE_CACHE: /*--*/ ret;
-		to PA_SUBSCRIPTION_EVENT_SERVER: /*--------*/ ret;
-		to PA_SUBSCRIPTION_EVENT_AUTOLOAD: /*------*/ ret;
-		to PA_SUBSCRIPTION_EVENT_CARD: /*----------*/ ret;
-		to PA_SUBSCRIPTION_EVENT_FACILITY_MASK: /*-*/ ret;
-		to PA_SUBSCRIPTION_EVENT_CHANGE: /*--------*/ brk;
-		to PA_SUBSCRIPTION_EVENT_REMOVE: /*--------*/ ret;
-		to PA_SUBSCRIPTION_EVENT_TYPE_MASK: /*-----*/ ret;
-		off: /*------------------------------------*/ ret;
-	end
-	{
-		pa_operation *operation = pa_context_get_server_info(context, getSinkName, NULL);
-		pa_operation_unref(operation);
+#ifdef DEBUG
+	if((event & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_NEW){
+		fprintf(stdout, "PA_SUBSCRIPTION_EVENT_NEW\n");
 	}
-	{
-		pa_operation *operation = pa_context_get_sink_info_by_name(context, defaultSinkName, getSinkInfo, NULL);
-		pa_operation_unref(operation);
+	if((event & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_CHANGE){
+		fprintf(stdout, "PA_SUBSCRIPTION_EVENT_CHANGE\n");
+	}
+	if((event & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_REMOVE){
+		fprintf(stdout, "PA_SUBSCRIPTION_EVENT_REMOVE\n");
+	}
+#endif
+	if((event & PA_SUBSCRIPTION_EVENT_FACILITY_MASK) == PA_SUBSCRIPTION_EVENT_SINK){
+		if((event & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_NEW){
+			pa_operation *operation = pa_context_get_server_info(context, getSinkName, NULL);
+			pa_operation_unref(operation);
+			ret;
+		}
+		if((event & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_REMOVE){
+			pa_operation *operation = pa_context_get_server_info(context, getSinkName, NULL);
+			pa_operation_unref(operation);
+			ret;
+		}
+		if((event & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_CHANGE){
+			pa_operation *operation = pa_context_get_sink_info_by_name(context, defaultSinkName, getSinkInfo, NULL);
+			pa_operation_unref(operation);
+			ret;
+		}
 	}
 	ret;
 }
@@ -1068,28 +1069,45 @@ GETSINKNAME(){
 	defaultSinkName = (*si).default_sink_name;
 	ret;
 }
+FIRSTGETSINKINFO(){
+	(void)context;
+	(void)userdata;
+	if(eol < 0){
+		fprintf(stdout, "get initial sink info problem\n");
+		ret;
+	}
+	if(!eol){
+		const int newVolume = (pa_cvolume_avg(&(*si).volume) + 1) * 100 / PA_VOLUME_NORM;
+		const bool newMute = (*si).mute;
+		volume = newVolume;
+		mute = newMute;
+		oldVolume = newVolume;
+		oldMute = newMute;
+		ret;
+	}
+	ret;
+}
 GETSINKINFO(){
 	(void)context;
-	(void)eol;
 	(void)userdata;
-	(void)si;
 	if(eol < 0){
 		fprintf(stdout, "get sink info problem\n");
 		ret;
 	}
 	if(!eol){
-		const int tempVolume = volume;
-		volume = (pa_cvolume_avg(&(*si).volume) + 1) * 100 / PA_VOLUME_NORM;
-		if(lastVolume == -1){
-			lastVolume = volume;
-			ret;
+		const int newVolume = (pa_cvolume_avg(&(*si).volume) + 1) * 100 / PA_VOLUME_NORM;
+		const bool newMute = (*si).mute;
+		if(newVolume != volume or newMute != mute){
+			oldVolume = volume;
+			oldMute = mute;
+			volume = newVolume;
+			mute = newMute;
+			xcb_configure_window(connection, window, XCB_CONFIG_WINDOW_STACK_MODE, &stackMode);
+			xcb_map_window(connection, window);
+			xcb_flush(connection);
+			seconds = time(NULL);
 		}
-		lastVolume = tempVolume;
-		mute = (*si).mute;
-		xcb_configure_window(connection, window, XCB_CONFIG_WINDOW_STACK_MODE, &stackMode);
-		xcb_map_window(connection, window);
-		xcb_flush(connection);
-		seconds = time(NULL);
+		ret;
 	}
 	/*! pa_mainloop_quit(mainloop, 0); */
 	ret;
