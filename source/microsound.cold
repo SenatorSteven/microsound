@@ -70,8 +70,8 @@ SOFTWARE. */
 
 	const char * /*------*/ defaultSinkName;
 
-	uint /*--------------*/ lastVolume;
-	int /*---------------*/ volume = -1;
+	int /*---------------*/ lastVolume = -1;
+	int /*---------------*/ volume;
 	bool /*--------------*/ mute;
 /*!}*/
 
@@ -180,7 +180,6 @@ SOFTWARE. */
 	xDepth /*----------*/ depth;
 	const char  left[] = "left";
 	const char right[] = "right";
-	bool received;
 	const uint32 stackMode = XCB_STACK_MODE_ABOVE;
 	#undef  xWindow
 	#undef  xGenericEvent
@@ -201,25 +200,12 @@ SOFTWARE. */
 	PRINTUNEXPECTEDEVENT_DEC;
 /*!}*/
 
-#define QUIT_DEC /*----------*/ local void quit(const int signal)
 #define LOADTEXTURE_DEC /*---*/ local Texture loadTexture(const char *const path)
 
 #define LITERAL_LENGTH(l) /*-*/ (sizeof(l) - 1)
 
 time_t seconds;
 
-QUIT_DEC{
-	ret;
-	if(signal != SIGUSR1){
-		printError("ignoring received signal, not SIGUSR1");
-		ret;
-	}
-	received = true;
-	xcb_configure_window(connection, window, XCB_CONFIG_WINDOW_STACK_MODE, &stackMode);
-	xcb_map_window(connection, window);
-	xcb_flush(connection);
-	ret;
-}
 LOADTEXTURE_DEC{
 	Texture texture;
 	FILE *file;
@@ -372,7 +358,6 @@ int main(const int argumentAmount, const char *const *argument){
 	jmp main;
 	main:{
 		duration = 2;
-		received = false;
 		foreground = 0xFF292929;
 		background = 0xFFE5E5E3;
 /*!
@@ -414,17 +399,31 @@ int main(const int argumentAmount, const char *const *argument){
 */
 		case0     = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
 		case1     = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
+		case2     = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
+		case3     = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
 		wallpaper = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
 		{
 			Texture soundBox = loadTexture("/home/steven/Documents/microsound/assets/modern/sound_box.bmp");
 			realApplyTexture(soundBox, case0);
 			realApplyTexture(soundBox, case1);
+			realApplyTexture(soundBox, case2);
+			realApplyTexture(soundBox, case3);
 			free(soundBox.data);
 		}
 		{
 			Texture mute = loadTexture("/home/steven/Documents/microsound/assets/modern/mute.bmp");
 			realApplyTexture(mute, case1);
 			free(mute.data);
+		}
+		{
+			Texture plus = loadTexture("/home/steven/Documents/microsound/assets/modern/plus.bmp");
+			realApplyTexture(plus, case2);
+			free(plus.data);
+		}
+		{
+			Texture minus = loadTexture("/home/steven/Documents/microsound/assets/modern/minus.bmp");
+			realApplyTexture(minus, case3);
+			free(minus.data);
 		}
 		width  = case0.width;
 		height = case0.height;
@@ -512,17 +511,7 @@ int main(const int argumentAmount, const char *const *argument){
 		if(depth == 24){
 			printError("could not use 32-bit depth, using 24-bit depth instead");
 		}
-		jmp setupSignal;
-	}
-	setupSignal:{
-		#define Sigaction /*-*/ struct sigaction
-		Sigaction s;
-		s.sa_handler = quit;
-		s.sa_flags = 0;
-		sigemptyset(&s.sa_mask);
-		sigaction(SIGUSR1, &s, NULL);
 		jmp eventLoop;
-		#undef  Sigaction
 	}
 	eventLoop:{
 		xcb_flush(connection);
@@ -614,35 +603,28 @@ int main(const int argumentAmount, const char *const *argument){
 			}
 			if(mute){
 				realApplyTexture1(case1, t);
-				if(received) jmp prepareForAnotherExpose;
 			}else{
-				realApplyTexture1(case0, t);
-				if(received) jmp prepareForAnotherExpose;
+				if(volume == lastVolume){
+					realApplyTexture1(case0, t);
+				}elif(volume > lastVolume){
+					realApplyTexture1(case2, t);
+				}else{
+					realApplyTexture1(case3, t);
+				}
 			}
 			xcb_put_image_checked(connection, XCB_IMAGE_FORMAT_Z_PIXMAP, window, gc, width, height, 0, 0, 0, depth, t.size, (void *)t.data);
 			xcb_image_text_8_checked(connection, LITERAL_LENGTH(left), window, gc, fontX + 10, fontY + 10 + 2 * fontHeight, left);
-			if(received) jmp prepareForAnotherExpose;
 			xcb_image_text_8_checked(connection, strlen(soundNameLeft), window, gc, fontX + 10, fontY + 10 + 3 * fontHeight, soundNameLeft);
-			if(received) jmp prepareForAnotherExpose;
 			xcb_image_text_8_checked(connection, LITERAL_LENGTH(right), window, gc, fontX + 10, fontY + 10 + 4 * fontHeight, right);
-			if(received) jmp prepareForAnotherExpose;
 			xcb_image_text_8_checked(connection, strlen(soundNameRight), window, gc, fontX + 10, fontY + 10 + 5 * fontHeight, soundNameRight);
-			if(received) jmp prepareForAnotherExpose;
 			xcb_flush(connection);
 			if(time(NULL) - seconds >= duration){
-				if(received) jmp prepareForAnotherExpose;
-				if(received) jmp prepareForAnotherExpose;
 				xcb_unmap_window(connection, window);
 				xcb_flush(connection);
 				jmp eventLoop;
 			}
 		}
 		jmp exposeEventInner;
-	}
-	prepareForAnotherExpose:{
-		xcb_flush(connection);
-		received = false;
-		jmp exposeEvent;
 	}
 	unexpectedEvent:{
 		printUnexpectedEvent();
@@ -1015,12 +997,16 @@ PULSEAUDIOSTART(){
 		#undef  PA_CONTEXT_NONE
 	}
 	{
-		pa_operation *operation = pa_context_subscribe(context, PA_SUBSCRIPTION_MASK_SINK, NULL, NULL);
-		pa_context_set_subscribe_callback(context, subscribeCallback, NULL);
+		pa_operation *operation = pa_context_get_server_info(context, getSinkName, NULL);
 		pa_operation_unref(operation);
 	}
 	{
-		pa_operation *operation = pa_context_get_server_info(context, getSinkName, NULL);
+		pa_operation *operation = pa_context_get_sink_info_by_name(context, defaultSinkName, getSinkInfo, NULL);
+		pa_operation_unref(operation);
+	}
+	{
+		pa_operation *operation = pa_context_subscribe(context, PA_SUBSCRIPTION_MASK_SINK, NULL, NULL);
+		pa_context_set_subscribe_callback(context, subscribeCallback, NULL);
 		pa_operation_unref(operation);
 	}
 	{
@@ -1067,6 +1053,10 @@ SUBSCRIBECALLBACK(){
 		off: /*------------------------------------*/ ret;
 	end
 	{
+		pa_operation *operation = pa_context_get_server_info(context, getSinkName, NULL);
+		pa_operation_unref(operation);
+	}
+	{
 		pa_operation *operation = pa_context_get_sink_info_by_name(context, defaultSinkName, getSinkInfo, NULL);
 		pa_operation_unref(operation);
 	}
@@ -1088,17 +1078,19 @@ GETSINKINFO(){
 		ret;
 	}
 	if(!eol){
-		if(volume != -1){
-			lastVolume = volume;
-		}
-		mute = (*si).mute;
+		const int tempVolume = volume;
 		volume = (pa_cvolume_avg(&(*si).volume) + 1) * 100 / PA_VOLUME_NORM;
+		if(lastVolume == -1){
+			lastVolume = volume;
+			ret;
+		}
+		lastVolume = tempVolume;
+		mute = (*si).mute;
 		xcb_configure_window(connection, window, XCB_CONFIG_WINDOW_STACK_MODE, &stackMode);
 		xcb_map_window(connection, window);
 		xcb_flush(connection);
 		seconds = time(NULL);
 	}
 	/*! pa_mainloop_quit(mainloop, 0); */
-	
 	ret;
 }
