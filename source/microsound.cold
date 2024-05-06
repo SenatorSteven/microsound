@@ -20,6 +20,18 @@
 	use a different method to measure time passed, preferably one that uses milliseconds rather than the system's seconds.
 */
 
+/*!
+	bluetooth sound control does not work when sound is not playing (most of the time). if sound plays, it works correctly.
+*/
+
+/*!
+	create and show an unmute "emote" when unmuting (case1)
+*/
+
+/*!
+	handle monitor changes
+*/
+
 
 
 
@@ -83,7 +95,7 @@ SOFTWARE. */
 /*!}*/
 
 /*!{*/
-	pthread_t /*-*/ pulseaudioThread;
+	pthread_t /*---------*/ pulseaudioThread;
 
 	pa_mainloop * /*-----*/ mainloop;
 	pa_mainloop_api * /*-*/ api;
@@ -381,14 +393,14 @@ int main(const int argumentAmount, const char *const *argument){
 		duration = 3;
 		foreground = 0xFF292929;
 		background = 0xFFE5E5E3;
-		case0      = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
-		case1      = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
-		case2      = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
-		case3      = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_unfilled.bmp");
-		barOverlay = loadTexture("/home/steven/Documents/microsound/assets/modern/bars_filled.bmp");
-		wallpaper  = loadTexture("/home/steven/Documents/microsound/assets/modern/wallpaper.bmp");
+		case0      = loadTexture("/home/steven/Documents/microsound/assets/bars_unfilled.bmp");
+		case1      = loadTexture("/home/steven/Documents/microsound/assets/bars_unfilled.bmp");
+		case2      = loadTexture("/home/steven/Documents/microsound/assets/bars_unfilled.bmp");
+		case3      = loadTexture("/home/steven/Documents/microsound/assets/bars_unfilled.bmp");
+		barOverlay = loadTexture("/home/steven/Documents/microsound/assets/bars_filled.bmp");
+		wallpaper  = loadTexture("/home/steven/Documents/microsound/assets/wallpaper.bmp");
 		{
-			Texture soundBox = loadTexture("/home/steven/Documents/microsound/assets/modern/sound_box.bmp");
+			Texture soundBox = loadTexture("/home/steven/Documents/microsound/assets/sound_box.bmp");
 			realApplyTexture(soundBox, case0);
 			realApplyTexture(soundBox, case1);
 			realApplyTexture(soundBox, case2);
@@ -396,17 +408,22 @@ int main(const int argumentAmount, const char *const *argument){
 			free(soundBox.data);
 		}
 		{
-			Texture mute = loadTexture("/home/steven/Documents/microsound/assets/modern/mute.bmp");
+			Texture mute = loadTexture("/home/steven/Documents/microsound/assets/mute.bmp");
 			realApplyTexture(mute, case0);
 			free(mute.data);
 		}
+		/*! {
+			Texture sound = loadTexture("/home/steven/Documents/microsound/assets/sound.bmp");
+			realApplyTexture(sound, case1);
+			free(sound.data);
+		} */
 		{
-			Texture plus = loadTexture("/home/steven/Documents/microsound/assets/modern/plus.bmp");
+			Texture plus = loadTexture("/home/steven/Documents/microsound/assets/plus.bmp");
 			realApplyTexture(plus, case2);
 			free(plus.data);
 		}
 		{
-			Texture minus = loadTexture("/home/steven/Documents/microsound/assets/modern/minus.bmp");
+			Texture minus = loadTexture("/home/steven/Documents/microsound/assets/minus.bmp");
 			realApplyTexture(minus, case3);
 			free(minus.data);
 		}
@@ -618,7 +635,7 @@ int main(const int argumentAmount, const char *const *argument){
 				const uint largePercentage = (100 - localVolume) * barOverlay.height / 100;
 				realApplyTexture1WithXY(0, largePercentage, 0, (t.height - barOverlay.height) / 2 + largePercentage, barOverlay, t);
 			}
-			xcb_put_image_checked(connection, XCB_IMAGE_FORMAT_Z_PIXMAP, window, gc, width, height, 0, 0, 0, depth, t.size, (void *)t.data);
+			xcb_put_image(connection, XCB_IMAGE_FORMAT_Z_PIXMAP, window, gc, width, height, 0, 0, 0, depth, t.size, (void *)t.data);
 			/*!xcb_image_text_8_checked(connection, LITERAL_LENGTH(left), window, gc, fontX + 10, fontY + 10 + 2 * fontHeight, left);
 			xcb_image_text_8_checked(connection, strlen(soundNameLeft), window, gc, fontX + 10, fontY + 10 + 3 * fontHeight, soundNameLeft);
 			xcb_image_text_8_checked(connection, LITERAL_LENGTH(right), window, gc, fontX + 10, fontY + 10 + 4 * fontHeight, right);
@@ -1120,3 +1137,4 @@ GETSINKINFO(){
 	/*! pa_mainloop_quit(mainloop, 0); */
 	ret;
 }
+
