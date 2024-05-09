@@ -57,7 +57,7 @@
 
 MIT License
 
-Copyright (C) 2022 Stefanos "Steven" Tsakiris
+Copyright (C) 2023 Stefanos "Steven" Tsakiris
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -1725,13 +1725,7 @@ int main(int argumentAmount, const char *const *argument){
 		monitorStart = monitorData;
 		monitorCurrent = monitorStart;
 		monitorWall = monitorStart + monitorAllocated;
-
-
-
-		valueList.backgroundColor = 0xFF000000;
-
-
-
+		valueList.backgroundColor = 0x00000000;
 		valueList.borderColor = 0x00000000;
 		valueList.overrideRedirect = true;
 		valueList.eventMask = XCB_EVENT_MASK_EXPOSURE;
@@ -1866,7 +1860,7 @@ int main(int argumentAmount, const char *const *argument){
 				use magic, or just macros, so that the user can specify where he wants to put his window, regardless of monitor specifics
 			*/
 
-			(*monitorCurrent).windowX = (*monitorCurrent).leftX + ((*monitorCurrent).w - width) / 2;
+			(*monitorCurrent).windowX = (*monitorCurrent).leftX + ((*monitorCurrent).w - width) / 2 - width;
 			(*monitorCurrent).windowY = (*monitorCurrent).topY + ((*monitorCurrent).h - height) / 2 + height;
 
 
@@ -5289,3 +5283,4 @@ CLOSEERRORSTREAM(){
 	}
 	ret;
 }
+
