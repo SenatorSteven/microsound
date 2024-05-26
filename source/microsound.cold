@@ -8,23 +8,11 @@
 */
 
 /*!
-	nothing is done when device is disconnected. if anything, an error will be thrown. connecting a device works properly.
-*/
-
-/*!
-	use a different method to measure time passed, preferably one that uses milliseconds rather than the system's seconds.
-*/
-
-/*!
 	bluetooth sound control does not work when sound is not playing (most of the time). if sound plays, it works correctly.
 */
 
 /*!
-	create and show an unmute "emote" when unmuting (case1).
-*/
-
-/*!
-	whatever the final result of what's below is, left and right ear sound are not properly represented because they're not properly handled.
+	create and show an unmute "emote" when unmuting.
 */
 
 /*!
@@ -33,6 +21,22 @@
 
 /*!
 	use a copy-existing subinstruction on set image
+*/
+
+/*!
+	some realloc fails when trying to allocate a segment pointer on the atom area, presumably from storing segment data on a non-main thread
+*/
+
+/*!
+	it would make more sense to store all user-generated sound events to be stored and then executed after the previous one has finished
+*/
+
+/*!
+	ask user in config about the overlay direction value
+*/
+
+/*!
+	use x y w h on set-image such that the user can even load a single image if they so choose to, even if 10 times, but they use only parts of it each time
 */
 
 
@@ -195,9 +199,11 @@ SOFTWARE. */
 	#define PULSEAUDIOSTART() /*-------------*/ local void       *pulseaudioStart(void *arg)
 	#define GETSTATE() /*--------------------*/ local void        getState(pa_context *const context, void *const userdata)
 	#define SUBSCRIBECALLBACK() /*-----------*/ local void        subscribeCallback(pa_context *const context, pa_subscription_event_type_t event, uint32 idx, void *const userdata)
-	#define GETSINKNAME() /*-----------------*/ local void        getSinkName(pa_context *const context, const pa_server_info *const si, void *const userdata)
-	#define FIRSTGETSINKINFO() /*------------*/ local void        firstGetSinkInfo(pa_context *const context, const pa_sink_info *const si, int eol, void *const userdata)
-	#define GETSINKINFO() /*-----------------*/ local void        getSinkInfo(pa_context *const context, const pa_sink_info *const si, int eol, void *const userdata)
+	#define GETSINKNAME() /*-----------------*/ local void        getSinkName(pa_context *const context, const pa_server_info *const info, void *const userdata)
+	#define FIRSTGETSINKINFO() /*------------*/ local void        firstGetSinkInfo(pa_context *const context, const pa_sink_info *const info, const int eol, void *const userdata)
+	#define GETSINKINFO() /*-----------------*/ local void        getSinkInfo(pa_context *const context, const pa_sink_info *const info, const int eol, void *const userdata)
+	#define BOOLSTATUS() /*------------------*/ local void        boolStatus(pa_context *const context, const int success, void *const userData)
+	#define TEMPORARYCALLBACK() /*-----------*/ local void        temporaryCallback(pa_context *const context, const pa_sink_info *const info, const int eol, void *const userData)
 
 
 
@@ -344,6 +350,8 @@ SOFTWARE. */
 		int32 /*---------------*/ y;
 		int32 /*---------------*/ width;
 		int32 /*---------------*/ height;
+		uint8 /*---------------*/ direction;
+		uint8 /*---------------*/ pad0[7];
 	} Image;
 
 	def struct{
@@ -492,8 +500,7 @@ SOFTWARE. */
 	local uint /*-------------------------*/ sharedStartToken;
 	local char * /*-----------------------*/ sharedCurrent;
 	local pthread_t /*--------------------*/ pulseaudioThread;
-	local pa_mainloop * /*----------------*/ mainloop;
-	local pa_mainloop_api * /*------------*/ api;
+	local pa_threaded_mainloop * /*-------*/ mainloop;
 	local pa_context * /*-----------------*/ context;
 	local xcb_connection_t * /*-----------*/ connection;
 	local uint /*-------------------------*/ connectionToken;
@@ -541,11 +548,24 @@ SOFTWARE. */
 
 
 
-	local bool /*-------------------------*/ oldMute;
+#define NONE_PULSEAUDIO_EVENT /*--------*/ (0)
+#define VOLUME_UP_PULSEAUDIO_EVENT /*---*/ (1)
+#define VOLUME_DOWN_PULSEAUDIO_EVENT /*-*/ (2)
+#define MUTE_PULSEAUDIO_EVENT /*--------*/ (3)
+
+
+
+	local uint8 /*------------------------*/ pulseaudioEvent;
+	local uint8 /*------------------------*/ volumeUpPercent;
+	local uint8 /*------------------------*/ volumeDownPercent;
+
+
+
 	local bool /*-------------------------*/ mute;
 	local int /*--------------------------*/ oldVolume;
 	local int /*--------------------------*/ volume;
-	local int /*--------------------------*/ localVolume;
+	local int /*--------------------------*/ rangedOldVolume;
+	local int /*--------------------------*/ rangedVolume;
 
 	local uint32 * /*---------------------*/ intermediateData;
 	local uint32 * /*---------------------*/ data;
@@ -568,6 +588,13 @@ SOFTWARE. */
 	local uint /*-------------------------*/ height;
 	local uint8 /*------------------------*/ whichMonitor;
 	local uint /*-------------------------*/ duration;
+
+
+
+#define NoneBlur /*-------*/ (0)
+#define TwoPassBoxBlur /*-*/ (1)
+
+	local uint8 /*------------------------*/ blurUsed;
 
 
 
@@ -616,14 +643,12 @@ SOFTWARE. */
 		, "height"
 		, "which-monitor"
 		, "duration"
-
-
-
+		, "use-blur"
+		, "increment-percentage"
+		, "decrement-percentage"
 		, "set-image"
+		, "set-image-direction"
 		, "overlay-image"
-
-
-
 		, "grab-keycode"
 		, "grab-button"
 		, "ungrab-keycode"
@@ -674,6 +699,12 @@ SOFTWARE. */
 		, "all-monitors"
 		, "initial-pointer-monitor"
 		, "following-pointer-monitor"
+		, "no-blur"
+		, "two-pass-box-blur"
+		, "up-left"
+		, "up-right"
+		, "down-left"
+		, "down-right"
 		, NULL
 	};
 	local const char *const /*------------*/ commandList[] = {
@@ -697,21 +728,12 @@ SOFTWARE. */
 	local const Instruction /*------------*/ heightInstruction[] = {NumberInstruction, EndInstruction};
 	local const Instruction /*------------*/ whichMonitorInstruction[] = {NumberInstruction, EndInstruction};
 	local const Instruction /*------------*/ durationInstruction[] = {NumberInstruction, EndInstruction};
-
-
-
-#ifdef a
+	local const Instruction /*------------*/ useBlurInstruction[] = {NumberInstruction, EndInstruction};
+	local const Instruction /*------------*/ incrementPercentangeInstruction[] = {NumberInstruction, EndInstruction};
+	local const Instruction /*------------*/ decrementPercentangeInstruction[] = {NumberInstruction, EndInstruction};
 	local const Instruction /*------------*/ setImageInstruction[] = {NameInstruction, NumberInstruction, NumberInstruction, ImageInstruction, EndInstruction};
+	local const Instruction /*------------*/ setImageDirectionInstruction[] = {NameInstruction, NumberInstruction, EndInstruction};
 	local const Instruction /*------------*/ overlayImageInstruction[] = {NameInstruction, NumberInstruction, NumberInstruction, ImageInstruction, EndInstruction};
-#endif
-
-
-
-	local const Instruction /*------------*/ setImageInstruction[] = {NameInstruction, ImageInstruction, EndInstruction};
-	local const Instruction /*------------*/ overlayImageInstruction[] = {NameInstruction, ImageInstruction, EndInstruction};
-
-
-
 	local const Instruction /*------------*/ grabKeycodeInstruction[] = {NameListInstruction, NumberInstruction, NameInstruction, EndInstruction};
 	local const Instruction /*------------*/ grabButtonInstruction[] = {NameListInstruction, NumberInstruction, NameInstruction, EndInstruction};
 	local const Instruction /*------------*/ ungrabKeycodeInstruction[] = {NameListInstruction, NumberInstruction, EndInstruction};
@@ -722,6 +744,7 @@ SOFTWARE. */
 	local const Instruction /*------------*/ executeGrabButtonSubInstruction[] = {NameListInstruction, NumberInstruction, NameInstruction, ExecuteInstruction, EndInstruction};
 
 	local StringNodeRoot *const /*--------*/ setImageInstructionData[] = {&imageRoot};
+	local StringNodeRoot *const /*--------*/ setImageDirectionInstructionData[] = {&imageRoot};
 	local StringNodeRoot *const /*--------*/ overlayImageInstructionData[] = {&imageRoot};
 	local StringNodeRoot *const /*--------*/ grabKeycodeInstructionData[] = {&modifierRoot, &commandRoot};
 	local StringNodeRoot *const /*--------*/ grabButtonInstructionData[] = {&modifierRoot, &commandRoot};
@@ -740,14 +763,12 @@ SOFTWARE. */
 		, heightInstruction
 		, whichMonitorInstruction
 		, durationInstruction
-
-
-
+		, useBlurInstruction
+		, incrementPercentangeInstruction
+		, decrementPercentangeInstruction
 		, setImageInstruction
+		, setImageDirectionInstruction
 		, overlayImageInstruction
-
-
-
 		, grabKeycodeInstruction
 		, grabButtonInstruction
 		, ungrabKeycodeInstruction
@@ -773,14 +794,12 @@ SOFTWARE. */
 		, NULL
 		, NULL
 		, NULL
-
-
-
+		, NULL
+		, NULL
+		, NULL
 		, setImageInstructionData
+		, setImageDirectionInstructionData
 		, overlayImageInstructionData
-
-
-
 		, grabKeycodeInstructionData
 		, ungrabKeycodeInstructionData
 		, grabButtonInstructionData
@@ -799,445 +818,6 @@ SOFTWARE. */
 	#endif
 /*!}*/
 
-
-
-
-
-
-
-
-
-	#define NoneWhichMonitor /*-------------*/ (0)
-	#define AllWhichMonitor /*--------------*/ (1)
-	#define InitialPointerWhichMonitor /*---*/ (2)
-	#define FollowingPointerWhichMonitor /*-*/ (3)
-
-	#define UpLeft /*-----------------------*/ (0)
-	#define UpRight /*----------------------*/ (1)
-	#define DownLeft /*---------------------*/ (2)
-	#define DownRight /*--------------------*/ (3)
-
-	#define OVERLAY() /*--------------------*/ local void overlay(const uint8 corner, Image *const source, Image *const destination)
-	#define ALPHAMAP() /*-------------------*/ local void alphaMap(Image source, Image destination)
-	#define DOUBLEBOXBLUR() /*--------------*/ local void doubleBoxBlur(const int width, const int height, uint32 *originalData, uint32 *intermediateData, uint32 *destinationData, const int boxSize)
-
-	OVERLAY();
-	ALPHAMAP();
-	DOUBLEBOXBLUR();
-
-	OVERLAY(){
-		const bool top = corner == UpLeft or corner == UpRight;
-		const bool left = corner == UpLeft or corner == DownLeft;
-		uint32 *sourceData = (*source).data;
-		uint32 *destinationData = (*destination).data;
-		int destinationX = (*source).x;
-		int destinationY = (*source).y;
-		int destinationW = (*destination).width;
-		int destinationH = (*destination).height;
-		int sourceX = destinationX;
-		int sourceY = destinationY;
-		int sourceW = (*source).width;
-		int sourceH = (*source).height;
-		int x = 0;
-		if(sourceX < 0){
-			sourceX = -sourceX;
-			sourceW -= sourceX;
-			destinationX = sourceX;
-		}else{
-			sourceX = 0;
-		}
-		if(sourceX + sourceW > destinationW){
-			sourceW = destinationW - sourceX;
-		}
-		if(sourceY < 0){
-			sourceY = -sourceY;
-			sourceH -= sourceY;
-			destinationY = sourceY;
-		}else{
-			sourceY = 0;
-		}
-		if(sourceY + sourceH > destinationH){
-			sourceH = destinationH - sourceY;
-		}
-
-
-
-		int directionOffsetX = 0;
-		int directionMultiplierX = 1;
-		int directionOffsetY = 0;
-		int directionMultiplierY = 1;
-		if(!left){
-			directionOffsetX = destinationW - 1;
-			directionMultiplierX = -1;
-		}
-		if(!top){
-			directionOffsetY = destinationH - 1;
-			directionMultiplierY = -1;
-		}
-
-
-
-		jmp xAxisLoop;
-		xAxisLoop:{
-			if(x < sourceW){
-				int y = 0;
-				jmp yAxisLoop;
-				yAxisLoop:{
-					if(y < sourceH){
-
-
-
-						uint32 *d = destinationData + (directionOffsetY + directionMultiplierY * (destinationY + y)) * destinationW + (directionOffsetX + directionMultiplierX * (destinationX + x));
-
-
-
-						uint32 *s = sourceData + (sourceY + y) * sourceW + sourceX + x;
-						if(*s & 0xFF000000){
-
-
-
-							*d = *s;
-
-
-
-						}
-						inc y;
-						jmp yAxisLoop;
-					}
-				}
-				inc x;
-				jmp xAxisLoop;
-			}
-		}
-		ret;
-	}
-	ALPHAMAP(){
-		uint32 *sourceData = source.data;
-		uint32 *destinationData = destination.data;
-		int destinationX = source.x;
-		int destinationY = source.y;
-		int destinationW = destination.width;
-		int destinationH = destination.height;
-		int sourceX = source.x;
-		int sourceY = source.y;
-		int sourceW = source.width;
-		int sourceH = source.height;
-		int x = 0;
-		if(sourceX < 0){
-			sourceX = -sourceX;
-			sourceW -= sourceX;
-			destinationX = sourceX;
-		}else{
-			sourceX = 0;
-		}
-		if(sourceX + sourceW > destinationW){
-			sourceW = destinationW - sourceX;
-		}
-		if(sourceY < 0){
-			sourceY = -sourceY;
-			sourceH -= sourceY;
-			destinationY = sourceY;
-		}else{
-			sourceY = 0;
-		}
-		if(sourceY + sourceH > destinationH){
-			sourceH = destinationH - sourceY;
-		}
-		jmp xAxisLoop;
-		xAxisLoop:{
-			if(x < sourceW){
-				int y = 0;
-				jmp yAxisLoop;
-				yAxisLoop:{
-					if(y < sourceH){
-						uint32 *d = destinationData + (destinationY + y) * destinationW + destinationX + x;
-						uint32 *s = sourceData + (sourceY + y) * sourceW + sourceX + x;
-						uint32 alpha = *s & 0xFF000000;
-						if(alpha){
-							*d = (*d & 0x00FFFFFF) | alpha;
-						}else{
-							*d = 0x00000000;
-						}
-						inc y;
-						jmp yAxisLoop;
-					}
-				}
-				inc x;
-				jmp xAxisLoop;
-			}
-		}
-		ret;
-	}
-	DOUBLEBOXBLUR(){
-		const int divisor = boxSize * boxSize;
-		const int boxDistanceFromZero = boxSize >> 1;
-		const int nBoxDistanceFromZero = -boxDistanceFromZero;
-		const int widthMinusOne = width - 1;
-		const int heightMinusOne = height - 1;
-		const int heightMinusBoxSize = height - boxSize;
-		uint32 *tx = originalData;
-		uint32 *txCopy = tx;
-		uint32 *rx = intermediateData;
-		uint32 r;
-		uint32 g;
-		uint32 b;
-		loop:{
-			uint32 *kernelColumnRCurrent = kernelColumnRStart;
-			uint32 *kernelColumnGCurrent = kernelColumnGStart;
-			uint32 *kernelColumnBCurrent = kernelColumnBStart;
-			uint32 *kernelColumnRCurrentCopy = kernelColumnRStart;
-			uint32 *kernelColumnGCurrentCopy = kernelColumnGStart;
-			uint32 *kernelColumnBCurrentCopy = kernelColumnBStart;
-			uint32 *pixelRCurrent = pixelRStart;
-			uint32 *pixelGCurrent = pixelGStart;
-			uint32 *pixelBCurrent = pixelBStart;
-			uint32 *pixelRCurrentCopy = pixelRStart;
-			uint32 *pixelGCurrentCopy = pixelGStart;
-			uint32 *pixelBCurrentCopy = pixelBStart;
-			int x = 0;
-			int y = 0;
-			{
-				int kx = nBoxDistanceFromZero;
-				r = 0;
-				g = 0;
-				b = 0;
-				while(kx <= boxDistanceFromZero){
-					int ky = nBoxDistanceFromZero;
-					int usedX = x + kx;
-					if(usedX < 0){
-						usedX = 0;
-					}
-					*kernelColumnRCurrent = 0;
-					*kernelColumnGCurrent = 0;
-					*kernelColumnBCurrent = 0;
-					tx += usedX;
-					while(ky <= boxDistanceFromZero){
-						int usedY = y + ky;
-						uint32 color;
-						if(usedY < 0){
-							usedY = 0;
-						}
-						color = *(tx + usedY * width);
-						*pixelRCurrent = (color & 0xFF0000) >> 16;
-						*pixelGCurrent = (color & 0x00FF00) >>  8;
-						*pixelBCurrent =  color & 0x0000FF;
-						*kernelColumnRCurrent += *pixelRCurrent;
-						*kernelColumnGCurrent += *pixelGCurrent;
-						*kernelColumnBCurrent += *pixelBCurrent;
-						inc pixelRCurrent;
-						inc pixelGCurrent;
-						inc pixelBCurrent;
-						inc ky;
-					}
-					tx -= usedX;
-					r += *kernelColumnRCurrent;
-					g += *kernelColumnGCurrent;
-					b += *kernelColumnBCurrent;
-					pixelRCurrent += heightMinusBoxSize;
-					pixelGCurrent += heightMinusBoxSize;
-					pixelBCurrent += heightMinusBoxSize;
-					inc kernelColumnRCurrent;
-					inc kernelColumnGCurrent;
-					inc kernelColumnBCurrent;
-					inc kx;
-				}
-				*rx = 0xFF000000 + ((r / divisor) << 16) + ((g / divisor) << 8) + b / divisor;
-				inc rx;
-			}
-			inc x;
-			xFirstLoop:{
-				int kx = boxDistanceFromZero;
-				int ky = nBoxDistanceFromZero;
-				int usedX = x + kx;
-				if(usedX < 0){
-					usedX = 0;
-				}elif(usedX >= width){
-					usedX = widthMinusOne;
-				}
-				r -= *kernelColumnRCurrentCopy;
-				g -= *kernelColumnGCurrentCopy;
-				b -= *kernelColumnBCurrentCopy;
-				kernelColumnRCurrent = kernelColumnRCurrentCopy + boxSize;
-				kernelColumnGCurrent = kernelColumnGCurrentCopy + boxSize;
-				kernelColumnBCurrent = kernelColumnBCurrentCopy + boxSize;
-				inc kernelColumnRCurrentCopy;
-				inc kernelColumnGCurrentCopy;
-				inc kernelColumnBCurrentCopy;
-				{
-					uint32 lr = 0;
-					uint32 lg = 0;
-					uint32 lb = 0;
-					tx += usedX;
-					while(ky <= boxDistanceFromZero){
-						int usedY = y + ky;
-						uint32 color;
-						if(usedY < 0){
-							usedY = 0;
-						}elif(usedY >= height){
-							usedY = heightMinusOne;
-						}
-						color = *(tx + usedY * width);
-						*pixelRCurrent = (color & 0xFF0000) >> 16;
-						*pixelGCurrent = (color & 0x00FF00) >>  8;
-						*pixelBCurrent =  color & 0x0000FF;
-						lr += *pixelRCurrent;
-						lg += *pixelGCurrent;
-						lb += *pixelBCurrent;
-						inc pixelRCurrent;
-						inc pixelGCurrent;
-						inc pixelBCurrent;
-						inc ky;
-					}
-					tx -= usedX;
-					r += lr;
-					g += lg;
-					b += lb;
-					*kernelColumnRCurrent = lr;
-					*kernelColumnGCurrent = lg;
-					*kernelColumnBCurrent = lb;
-					pixelRCurrent += heightMinusBoxSize;
-					pixelGCurrent += heightMinusBoxSize;
-					pixelBCurrent += heightMinusBoxSize;
-				}
-				*rx = 0xFF000000 + ((r / divisor) << 16) + ((g / divisor) << 8) + b / divisor;
-				inc rx;
-				if(inc x < width){
-					jmp xFirstLoop;
-				}
-			}
-			inc y;
-			yLoop:{
-				uint32 *pr;
-				uint32 *pg;
-				uint32 *pb;
-				int ky = boxDistanceFromZero;
-				int usedY = y + ky;
-				if(usedY < 0){
-					usedY = 0;
-				}elif(usedY >= height){
-					usedY = heightMinusOne;
-				}
-				x = 0;
-				{
-					int kx = nBoxDistanceFromZero;
-					kernelColumnRCurrent = kernelColumnRStart;
-					kernelColumnGCurrent = kernelColumnGStart;
-					kernelColumnBCurrent = kernelColumnBStart;
-					kernelColumnRCurrentCopy = kernelColumnRStart;
-					kernelColumnGCurrentCopy = kernelColumnGStart;
-					kernelColumnBCurrentCopy = kernelColumnBStart;
-					pixelRCurrent = pixelRCurrentCopy;
-					pixelGCurrent = pixelGCurrentCopy;
-					pixelBCurrent = pixelBCurrentCopy;
-					pr = pixelRCurrent + boxSize;
-					pg = pixelGCurrent + boxSize;
-					pb = pixelBCurrent + boxSize;
-					r = 0;
-					g = 0;
-					b = 0;
-					tx += usedY * width;
-					while(kx <= boxDistanceFromZero){
-						int usedX = x + kx;
-						uint32 color;
-						if(usedX < 0){
-							usedX = 0;
-						}elif(usedX >= width){
-							usedX = widthMinusOne;
-						}
-						color = *(tx + usedX);
-						*pr = (color & 0xFF0000) >> 16;
-						*pg = (color & 0x00FF00) >>  8;
-						*pb =  color & 0x0000FF;
-						*kernelColumnRCurrent += *pr - *pixelRCurrent;
-						*kernelColumnGCurrent += *pg - *pixelGCurrent;
-						*kernelColumnBCurrent += *pb - *pixelBCurrent;
-						r += *kernelColumnRCurrent;
-						g += *kernelColumnGCurrent;
-						b += *kernelColumnBCurrent;
-						pixelRCurrent += height;
-						pixelGCurrent += height;
-						pixelBCurrent += height;
-						pr += height;
-						pg += height;
-						pb += height;
-						inc kernelColumnRCurrent;
-						inc kernelColumnGCurrent;
-						inc kernelColumnBCurrent;
-						inc kx;
-					}
-					tx -= usedY * width;
-					*rx = 0xFF000000 + ((r / divisor) << 16) + ((g / divisor) << 8) + b / divisor;
-					inc rx;
-					inc x;
-				}
-				{
-					int usedX = x + boxDistanceFromZero;
-					usedY *= width;
-					tx += usedY;
-					xLoop:{
-						uint32 color;
-						if(usedX >= width){
-							usedX = widthMinusOne;
-						}
-						kernelColumnRCurrent = kernelColumnRCurrentCopy + boxSize;
-						kernelColumnGCurrent = kernelColumnGCurrentCopy + boxSize;
-						kernelColumnBCurrent = kernelColumnBCurrentCopy + boxSize;
-						r -= *kernelColumnRCurrentCopy;
-						g -= *kernelColumnGCurrentCopy;
-						b -= *kernelColumnBCurrentCopy;
-						color = *(tx + usedX);
-						*pr = (color & 0xFF0000) >> 16;
-						*pg = (color & 0x00FF00) >>  8;
-						*pb =  color & 0x0000FF;
-						*kernelColumnRCurrent += *pr - *pixelRCurrent;
-						*kernelColumnGCurrent += *pg - *pixelGCurrent;
-						*kernelColumnBCurrent += *pb - *pixelBCurrent;
-						r += *kernelColumnRCurrent;
-						g += *kernelColumnGCurrent;
-						b += *kernelColumnBCurrent;
-						inc kernelColumnRCurrentCopy;
-						inc kernelColumnGCurrentCopy;
-						inc kernelColumnBCurrentCopy;
-						pixelRCurrent += height;
-						pixelGCurrent += height;
-						pixelBCurrent += height;
-						pr += height;
-						pg += height;
-						pb += height;
-						*rx = 0xFF000000 + ((r / divisor) << 16) + ((g / divisor) << 8) + b / divisor;
-						inc rx;
-						if(inc x < width){
-							inc usedX;
-							jmp xLoop;
-						}
-					}
-					tx -= usedY;
-				}
-				if(inc y < height){
-					inc pixelRCurrentCopy;
-					inc pixelGCurrentCopy;
-					inc pixelBCurrentCopy;
-					jmp yLoop;
-				}
-			}
-			if(txCopy == originalData){
-				tx = intermediateData;
-				txCopy = tx;
-				rx = destinationData;
-				jmp loop;
-			}
-		}
-		ret;
-	}
-
-
-
-
-
-
-
-
-
 /*!functions:{*/
 	QUIT();
 	GETSHAREDCHARACTER();
@@ -1255,12 +835,23 @@ SOFTWARE. */
 	IDENTIFYARGUMENT();
 	INSENSITIVESTRINGCOMPARE();
 	SENSITIVESTRINGCOMPARE();
+
+
+
 	PULSEAUDIOSTART();
 	GETSTATE();
 	SUBSCRIBECALLBACK();
 	GETSINKNAME();
 	FIRSTGETSINKINFO();
 	GETSINKINFO();
+
+
+
+	BOOLSTATUS();
+	TEMPORARYCALLBACK();
+
+
+
 	SETSTRINGROOT();
 	BULKINSERTSTRING();
 	INSERTSTRING();
@@ -1300,27 +891,500 @@ SOFTWARE. */
 
 
 
-void volumeChangeSuccess(pa_context *const context, const int success, void *const userData){
-	(void)context;
-	(void)userData;
-	/*! fprintf(stdout, "success: %s\n", success? "true" : "false"); */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#define NoneWhichMonitor /*-------------*/ (0)
+#define AllWhichMonitor /*--------------*/ (1)
+#define InitialPointerWhichMonitor /*---*/ (2)
+#define FollowingPointerWhichMonitor /*-*/ (3)
+
+#define UP_LEFT_IMAGE_DIRECTION /*------*/ (0)
+#define UP_RIGHT_IMAGE_DIRECTION /*-----*/ (1)
+#define DOWN_LEFT_IMAGE_DIRECTION /*----*/ (2)
+#define DOWN_RIGHT_IMAGE_DIRECTION /*---*/ (3)
+
+#define OVERLAY() /*--------------------*/ local void overlay(const uint8 corner, Image *const source, Image *const destination)
+#define ALPHAMAP() /*-------------------*/ local void alphaMap(Image source, Image destination)
+#define COPYIMAGE() /*------------------*/ local bool copyImage(Image *source, Image *destination)
+#define DOUBLEBOXBLUR() /*--------------*/ local void doubleBoxBlur(const int width, const int height, uint32 *originalData, uint32 *intermediateData, uint32 *destinationData, const int boxSize)
+
+OVERLAY();
+ALPHAMAP();
+COPYIMAGE();
+DOUBLEBOXBLUR();
+
+OVERLAY(){
+	const bool top = corner == UP_LEFT_IMAGE_DIRECTION or corner == UP_RIGHT_IMAGE_DIRECTION;
+	const bool left = corner == UP_LEFT_IMAGE_DIRECTION or corner == DOWN_LEFT_IMAGE_DIRECTION;
+	uint32 *sourceData = (*source).data;
+	uint32 *destinationData = (*destination).data;
+	int destinationX = (*source).x;
+	int destinationY = (*source).y;
+	int destinationW = (*destination).width;
+	int destinationH = (*destination).height;
+	int sourceX = destinationX;
+	int sourceY = destinationY;
+	int sourceW = (*source).width;
+	int sourceH = (*source).height;
+	int x = 0;
+
+
+
+	int directionOffsetX = 0;
+	int directionMultiplierX = 1;
+	int directionOffsetY = 0;
+	int directionMultiplierY = 1;
+
+
+
+	if(sourceX < 0){
+		sourceX = -sourceX;
+		sourceW -= sourceX;
+		destinationX = sourceX;
+	}else{
+		sourceX = 0;
+	}
+	if(sourceX + sourceW > destinationW){
+		sourceW = destinationW - sourceX;
+	}
+	if(sourceY < 0){
+		sourceY = -sourceY;
+		sourceH -= sourceY;
+		destinationY = sourceY;
+	}else{
+		sourceY = 0;
+	}
+	if(sourceY + sourceH > destinationH){
+		sourceH = destinationH - sourceY;
+	}
+
+
+
+	if(!left){
+		directionOffsetX = destinationW - 1;
+		directionMultiplierX = -1;
+	}
+	if(!top){
+		directionOffsetY = destinationH - 1;
+		directionMultiplierY = -1;
+	}
+
+
+
+	jmp xAxisLoop;
+	xAxisLoop:{
+		if(x < sourceW){
+			int y = 0;
+			jmp yAxisLoop;
+			yAxisLoop:{
+				if(y < sourceH){
+
+
+
+					const uint32 *const s = sourceData + (sourceY + y) * sourceW + sourceX + x;
+					uint32 *const d = destinationData + (directionOffsetY + directionMultiplierY * (destinationY + y)) * destinationW + (directionOffsetX + directionMultiplierX * (destinationX + x));
+
+
+
+					if(*s & 0xFF000000){
+
+
+
+						*d = *s;
+
+
+
+					}
+					inc y;
+					jmp yAxisLoop;
+				}
+			}
+			inc x;
+			jmp xAxisLoop;
+		}
+	}
 	ret;
 }
-void temporaryCallback(pa_context *const context, const pa_sink_info *const info, int eol, void *const userData){
-	(void)context;
-	(void)info;
-	(void)eol;
-	(void)userData;
-	if(eol < 0){
-		/*! printTitledError("pulseaudio error", "could not get initial sink information"); */
-		ret;
+ALPHAMAP(){
+	uint32 *sourceData = source.data;
+	uint32 *destinationData = destination.data;
+	int destinationX = source.x;
+	int destinationY = source.y;
+	int destinationW = destination.width;
+	int destinationH = destination.height;
+	int sourceX = source.x;
+	int sourceY = source.y;
+	int sourceW = source.width;
+	int sourceH = source.height;
+	int x = 0;
+	if(sourceX < 0){
+		sourceX = -sourceX;
+		sourceW -= sourceX;
+		destinationX = sourceX;
+	}else{
+		sourceX = 0;
 	}
-	if(!eol){
-		*(pa_channel_map *)userData = (*info).channel_map;
-		ret;
+	if(sourceX + sourceW > destinationW){
+		sourceW = destinationW - sourceX;
+	}
+	if(sourceY < 0){
+		sourceY = -sourceY;
+		sourceH -= sourceY;
+		destinationY = sourceY;
+	}else{
+		sourceY = 0;
+	}
+	if(sourceY + sourceH > destinationH){
+		sourceH = destinationH - sourceY;
+	}
+	jmp xAxisLoop;
+	xAxisLoop:{
+		if(x < sourceW){
+			int y = 0;
+			jmp yAxisLoop;
+			yAxisLoop:{
+				if(y < sourceH){
+
+
+
+					uint32 *d = destinationData + (destinationY + y) * destinationW + destinationX + x;
+					uint32 *s = sourceData + (sourceY + y) * sourceW + sourceX + x;
+
+
+
+					uint32 alpha = *s & 0xFF000000;
+					if(alpha){
+						if(*d != 0x00000000){
+							*d = (*d & 0x00FFFFFF) | alpha;
+						}
+					}else{
+						*d = 0x00000000;
+					}
+					inc y;
+					jmp yAxisLoop;
+				}
+			}
+			inc x;
+			jmp xAxisLoop;
+		}
 	}
 	ret;
 }
+COPYIMAGE(){
+	if(!(*destination).size or !((*destination).data = malloc((*destination).size * sizeof(uint8)))){
+		ret false;
+	}
+	(*destination).dataToken = pushPointer((*destination).data, "image data pointer", iFree);
+	{
+		const uint8 *sCurrent = (*source).data;
+		const uint8 *const sWall = sCurrent + (*source).size;
+		uint8 *dCurrent = (*destination).data;
+		jmp loop;
+		loop:{
+			*dCurrent = *sCurrent;
+			if(inc sCurrent < sWall){
+				inc dCurrent;
+				jmp loop;
+			}
+		}
+	}
+	ret true;
+}
+DOUBLEBOXBLUR(){
+	const int divisor = boxSize * boxSize;
+	const int boxDistanceFromZero = boxSize >> 1;
+	const int nBoxDistanceFromZero = -boxDistanceFromZero;
+	const int widthMinusOne = width - 1;
+	const int heightMinusOne = height - 1;
+	const int heightMinusBoxSize = height - boxSize;
+	uint32 *tx = originalData;
+	uint32 *txCopy = tx;
+	uint32 *rx = intermediateData;
+	uint32 r;
+	uint32 g;
+	uint32 b;
+	loop:{
+		uint32 *kernelColumnRCurrent = kernelColumnRStart;
+		uint32 *kernelColumnGCurrent = kernelColumnGStart;
+		uint32 *kernelColumnBCurrent = kernelColumnBStart;
+		uint32 *kernelColumnRCurrentCopy = kernelColumnRStart;
+		uint32 *kernelColumnGCurrentCopy = kernelColumnGStart;
+		uint32 *kernelColumnBCurrentCopy = kernelColumnBStart;
+		uint32 *pixelRCurrent = pixelRStart;
+		uint32 *pixelGCurrent = pixelGStart;
+		uint32 *pixelBCurrent = pixelBStart;
+		uint32 *pixelRCurrentCopy = pixelRStart;
+		uint32 *pixelGCurrentCopy = pixelGStart;
+		uint32 *pixelBCurrentCopy = pixelBStart;
+		int x = 0;
+		int y = 0;
+		{
+			int kx = nBoxDistanceFromZero;
+			r = 0;
+			g = 0;
+			b = 0;
+			while(kx <= boxDistanceFromZero){
+				int ky = nBoxDistanceFromZero;
+				int usedX = x + kx;
+				if(usedX < 0){
+					usedX = 0;
+				}
+				*kernelColumnRCurrent = 0;
+				*kernelColumnGCurrent = 0;
+				*kernelColumnBCurrent = 0;
+				tx += usedX;
+				while(ky <= boxDistanceFromZero){
+					int usedY = y + ky;
+					uint32 color;
+					if(usedY < 0){
+						usedY = 0;
+					}
+					color = *(tx + usedY * width);
+					*pixelRCurrent = (color & 0xFF0000) >> 16;
+					*pixelGCurrent = (color & 0x00FF00) >>  8;
+					*pixelBCurrent =  color & 0x0000FF;
+					*kernelColumnRCurrent += *pixelRCurrent;
+					*kernelColumnGCurrent += *pixelGCurrent;
+					*kernelColumnBCurrent += *pixelBCurrent;
+					inc pixelRCurrent;
+					inc pixelGCurrent;
+					inc pixelBCurrent;
+					inc ky;
+				}
+				tx -= usedX;
+				r += *kernelColumnRCurrent;
+				g += *kernelColumnGCurrent;
+				b += *kernelColumnBCurrent;
+				pixelRCurrent += heightMinusBoxSize;
+				pixelGCurrent += heightMinusBoxSize;
+				pixelBCurrent += heightMinusBoxSize;
+				inc kernelColumnRCurrent;
+				inc kernelColumnGCurrent;
+				inc kernelColumnBCurrent;
+				inc kx;
+			}
+			*rx = 0xFF000000 + ((r / divisor) << 16) + ((g / divisor) << 8) + b / divisor;
+			inc rx;
+		}
+		inc x;
+		xFirstLoop:{
+			int kx = boxDistanceFromZero;
+			int ky = nBoxDistanceFromZero;
+			int usedX = x + kx;
+			if(usedX < 0){
+				usedX = 0;
+			}elif(usedX >= width){
+				usedX = widthMinusOne;
+			}
+			r -= *kernelColumnRCurrentCopy;
+			g -= *kernelColumnGCurrentCopy;
+			b -= *kernelColumnBCurrentCopy;
+			kernelColumnRCurrent = kernelColumnRCurrentCopy + boxSize;
+			kernelColumnGCurrent = kernelColumnGCurrentCopy + boxSize;
+			kernelColumnBCurrent = kernelColumnBCurrentCopy + boxSize;
+			inc kernelColumnRCurrentCopy;
+			inc kernelColumnGCurrentCopy;
+			inc kernelColumnBCurrentCopy;
+			{
+				uint32 lr = 0;
+				uint32 lg = 0;
+				uint32 lb = 0;
+				tx += usedX;
+				while(ky <= boxDistanceFromZero){
+					int usedY = y + ky;
+					uint32 color;
+					if(usedY < 0){
+						usedY = 0;
+					}elif(usedY >= height){
+						usedY = heightMinusOne;
+					}
+					color = *(tx + usedY * width);
+					*pixelRCurrent = (color & 0xFF0000) >> 16;
+					*pixelGCurrent = (color & 0x00FF00) >>  8;
+					*pixelBCurrent =  color & 0x0000FF;
+					lr += *pixelRCurrent;
+					lg += *pixelGCurrent;
+					lb += *pixelBCurrent;
+					inc pixelRCurrent;
+					inc pixelGCurrent;
+					inc pixelBCurrent;
+					inc ky;
+				}
+				tx -= usedX;
+				r += lr;
+				g += lg;
+				b += lb;
+				*kernelColumnRCurrent = lr;
+				*kernelColumnGCurrent = lg;
+				*kernelColumnBCurrent = lb;
+				pixelRCurrent += heightMinusBoxSize;
+				pixelGCurrent += heightMinusBoxSize;
+				pixelBCurrent += heightMinusBoxSize;
+			}
+			*rx = 0xFF000000 + ((r / divisor) << 16) + ((g / divisor) << 8) + b / divisor;
+			inc rx;
+			if(inc x < width){
+				jmp xFirstLoop;
+			}
+		}
+		inc y;
+		yLoop:{
+			uint32 *pr;
+			uint32 *pg;
+			uint32 *pb;
+			int ky = boxDistanceFromZero;
+			int usedY = y + ky;
+			if(usedY < 0){
+				usedY = 0;
+			}elif(usedY >= height){
+				usedY = heightMinusOne;
+			}
+			x = 0;
+			{
+				int kx = nBoxDistanceFromZero;
+				kernelColumnRCurrent = kernelColumnRStart;
+				kernelColumnGCurrent = kernelColumnGStart;
+				kernelColumnBCurrent = kernelColumnBStart;
+				kernelColumnRCurrentCopy = kernelColumnRStart;
+				kernelColumnGCurrentCopy = kernelColumnGStart;
+				kernelColumnBCurrentCopy = kernelColumnBStart;
+				pixelRCurrent = pixelRCurrentCopy;
+				pixelGCurrent = pixelGCurrentCopy;
+				pixelBCurrent = pixelBCurrentCopy;
+				pr = pixelRCurrent + boxSize;
+				pg = pixelGCurrent + boxSize;
+				pb = pixelBCurrent + boxSize;
+				r = 0;
+				g = 0;
+				b = 0;
+				tx += usedY * width;
+				while(kx <= boxDistanceFromZero){
+					int usedX = x + kx;
+					uint32 color;
+					if(usedX < 0){
+						usedX = 0;
+					}elif(usedX >= width){
+						usedX = widthMinusOne;
+					}
+					color = *(tx + usedX);
+					*pr = (color & 0xFF0000) >> 16;
+					*pg = (color & 0x00FF00) >>  8;
+					*pb =  color & 0x0000FF;
+					*kernelColumnRCurrent += *pr - *pixelRCurrent;
+					*kernelColumnGCurrent += *pg - *pixelGCurrent;
+					*kernelColumnBCurrent += *pb - *pixelBCurrent;
+					r += *kernelColumnRCurrent;
+					g += *kernelColumnGCurrent;
+					b += *kernelColumnBCurrent;
+					pixelRCurrent += height;
+					pixelGCurrent += height;
+					pixelBCurrent += height;
+					pr += height;
+					pg += height;
+					pb += height;
+					inc kernelColumnRCurrent;
+					inc kernelColumnGCurrent;
+					inc kernelColumnBCurrent;
+					inc kx;
+				}
+				tx -= usedY * width;
+				*rx = 0xFF000000 + ((r / divisor) << 16) + ((g / divisor) << 8) + b / divisor;
+				inc rx;
+				inc x;
+			}
+			{
+				int usedX = x + boxDistanceFromZero;
+				usedY *= width;
+				tx += usedY;
+				xLoop:{
+					uint32 color;
+					if(usedX >= width){
+						usedX = widthMinusOne;
+					}
+					kernelColumnRCurrent = kernelColumnRCurrentCopy + boxSize;
+					kernelColumnGCurrent = kernelColumnGCurrentCopy + boxSize;
+					kernelColumnBCurrent = kernelColumnBCurrentCopy + boxSize;
+					r -= *kernelColumnRCurrentCopy;
+					g -= *kernelColumnGCurrentCopy;
+					b -= *kernelColumnBCurrentCopy;
+					color = *(tx + usedX);
+					*pr = (color & 0xFF0000) >> 16;
+					*pg = (color & 0x00FF00) >>  8;
+					*pb =  color & 0x0000FF;
+					*kernelColumnRCurrent += *pr - *pixelRCurrent;
+					*kernelColumnGCurrent += *pg - *pixelGCurrent;
+					*kernelColumnBCurrent += *pb - *pixelBCurrent;
+					r += *kernelColumnRCurrent;
+					g += *kernelColumnGCurrent;
+					b += *kernelColumnBCurrent;
+					inc kernelColumnRCurrentCopy;
+					inc kernelColumnGCurrentCopy;
+					inc kernelColumnBCurrentCopy;
+					pixelRCurrent += height;
+					pixelGCurrent += height;
+					pixelBCurrent += height;
+					pr += height;
+					pg += height;
+					pb += height;
+					*rx = 0xFF000000 + ((r / divisor) << 16) + ((g / divisor) << 8) + b / divisor;
+					inc rx;
+					if(inc x < width){
+						inc usedX;
+						jmp xLoop;
+					}
+				}
+				tx -= usedY;
+			}
+			if(inc y < height){
+				inc pixelRCurrentCopy;
+				inc pixelGCurrentCopy;
+				inc pixelBCurrentCopy;
+				jmp yLoop;
+			}
+		}
+		if(txCopy == originalData){
+			tx = intermediateData;
+			txCopy = tx;
+			rx = destinationData;
+			jmp loop;
+		}
+	}
+	ret;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1373,8 +1437,8 @@ int main(int argumentAmount, const char *const *argument){
 		lastGlobalCommand /*---*/ = 0;
 		acceptingShared /*-----*/ = false;
 		sharedHasArrived /*----*/ = false;
-		event /*--------------*/ = NULL;
-		eventToken /*---------*/ = 0;
+		event /*---------------*/ = NULL;
+		eventToken /*----------*/ = 0;
 		initMemoryManager();
 		shmConnect();
 		setStringRoot(&globalScopesInstructionRoot);
@@ -1589,7 +1653,17 @@ int main(int argumentAmount, const char *const *argument){
 		jmp startConcurrentThreads;
 	}
 	startConcurrentThreads:{
+
+
+
+		pulseaudioEvent = NONE_PULSEAUDIO_EVENT;
+
+
+
 		pthread_create(&pulseaudioThread, NULL, pulseaudioStart, NULL);
+
+
+
 		jmp establishServerConnection;
 	}
 	establishServerConnection:{
@@ -1664,6 +1738,10 @@ int main(int argumentAmount, const char *const *argument){
 
 
 		/*!
+			this causes an access error, due to the receiving of button press events
+
+
+
 			valueMask = XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_BUTTON_PRESS;
 			xcb_change_window_attributes(connection, (*screen).root, XCB_CW_EVENT_MASK, &valueMask);
 		*/
@@ -1981,18 +2059,26 @@ int main(int argumentAmount, const char *const *argument){
 		height = 0;
 		whichMonitor = NoneWhichMonitor;
 		duration = 0;
+		volumeDownPercent = 0;
+		volumeUpPercent = 0;
 		muteImage.data = NULL;
 		muteImage.dataToken = 0;
+		muteImage.direction = UP_LEFT_IMAGE_DIRECTION;
 		unmuteImage.data = NULL;
 		unmuteImage.dataToken = 0;
+		unmuteImage.direction = UP_LEFT_IMAGE_DIRECTION;
 		incrementImage.data = NULL;
 		incrementImage.dataToken = 0;
+		incrementImage.direction = UP_LEFT_IMAGE_DIRECTION;
 		decrementImage.data = NULL;
 		decrementImage.dataToken = 0;
+		decrementImage.direction = UP_LEFT_IMAGE_DIRECTION;
 		overlayImage.data = NULL;
 		overlayImage.dataToken = 0;
+		overlayImage.direction = UP_LEFT_IMAGE_DIRECTION;
 		alphaMapImage.data = NULL;
 		alphaMapImage.dataToken = 0;
+		alphaMapImage.direction = UP_LEFT_IMAGE_DIRECTION;
 		readConfig(true, configPath, fgetc);
 
 
@@ -2291,11 +2377,29 @@ int main(int argumentAmount, const char *const *argument){
 		}
 		exposeFindMonitorLoop:{
 			if((*monitorCurrent).window == window){
+				const bool localMute = mute;
+				const int localOldVolume = rangedOldVolume;
+				const int localVolume = rangedVolume;
 				const int x = (*monitorCurrent).windowX;
 				const int y = (*monitorCurrent).windowY;
 				xcb_get_image_reply_t *reply;
 				Image *usedImage;
 				Image finalImage;
+
+
+
+				/*! throw the declaration out of the loop */
+				{
+					xcb_expose_event_t expose;
+					expose.response_type = XCB_EXPOSE;
+					expose.window = window;
+					expose.count = 0;
+					xcb_send_event(connection, false, window, XCB_EVENT_MASK_EXPOSURE, &expose);
+				}
+
+
+
+				/*! probably add a little block to absolutely get the right mute and volume values here, and then let the other thread edit these values */
 
 
 
@@ -2308,60 +2412,44 @@ int main(int argumentAmount, const char *const *argument){
 
 
 
-				if((reply = xcb_wait_for_reply(connection, xcb_get_image(connection, XCB_IMAGE_FORMAT_Z_PIXMAP, (*screen).root, x, y - height, width, height, -1), NULL))){
-					doubleBoxBlur(width, height, (void *)xcb_get_image_data(reply), intermediateData, data, BOX_SIZE);
-					free(reply);
-				}
-				if(mute){
+				if(localMute){
 					usedImage = &muteImage;
-				}elif(volume == oldVolume){
+				}elif(localVolume == localOldVolume){
 					usedImage = &unmuteImage;
-				}elif(volume > oldVolume){
+				}elif(localVolume > localOldVolume){
 					usedImage = &incrementImage;
 				}else{
 					usedImage = &decrementImage;
 				}
-				finalImage.x = (*usedImage).x;
-				finalImage.y = (*usedImage).y;
-				overlay(UpLeft, usedImage, &finalImage);
+				switch blurUsed over
+					to TwoPassBoxBlur:{
+						if((reply = xcb_wait_for_reply(connection, xcb_get_image(connection, XCB_IMAGE_FORMAT_Z_PIXMAP, (*screen).root, x, y - height, width, height, -1), NULL))){
+							doubleBoxBlur(width, height, (void *)xcb_get_image_data(reply), intermediateData, data, BOX_SIZE);
+							free(reply);
+						}
+						overlay((*usedImage).direction, usedImage, &finalImage);
+						brk;
+					}
+					off:{
+						if(!copyImage(usedImage, &finalImage)){
+							jmp eventLoop;
+						}
+						brk;
+					}
+				end
 				if(overlayImage.data){
 					const int height = overlayImage.height;
-
-
-
-					overlayImage.x = 0;
-					overlayImage.y = 42;
-
-
-
 					overlayImage.height = overlayImage.height * localVolume / 100;
-					overlay(DownLeft, &overlayImage, &finalImage);
+					overlay(overlayImage.direction, &overlayImage, &finalImage);
 					overlayImage.height = height;
 				}
 				if(alphaMapImage.data){
 					alphaMap(alphaMapImage, finalImage);
 				}
-
-
-
-				/*! which x y are we using? why those? */
 				xcb_put_image(connection, XCB_IMAGE_FORMAT_Z_PIXMAP, window, (*monitorCurrent).gc, finalImage.width, finalImage.height, finalImage.x, finalImage.y, 0, depth, finalImage.size, (void *)finalImage.data);
-
-
-
-
-
-
-
-
-
-				/*! throw the declaration out of the loop */
-				{
-					xcb_expose_event_t expose_event;
-					expose_event.response_type = XCB_EXPOSE;
-					expose_event.window = window;
-					expose_event.count = 0;
-					xcb_send_event(connection, false, window, XCB_EVENT_MASK_EXPOSURE, &expose_event);
+				if(blurUsed == NoneBlur){
+					free(finalImage.data);
+					popPointer(finalImage.dataToken);
 				}
 
 
@@ -2440,62 +2528,24 @@ int main(int argumentAmount, const char *const *argument){
 		jmp eventLoopCheckShortcuts;
 	}
 	volumeUpCommand:{
-
-
-
-		/*!*/
-
-
-
+		if(!pulseaudioEvent){
+			pulseaudioEvent = VOLUME_UP_PULSEAUDIO_EVENT;
+			pa_threaded_mainloop_signal(mainloop, 0);
+		}
 		jmp eventLoopCheckShortcuts;
 	}
-	volumeDownCommand:{/*!
-		pa_operation *operation;
-
-
-
-		pa_cvolume newVolume;
-		pa_channel_map channelMap;
-		pa_volume_t volume = (double)localVolume / 100 * PA_VOLUME_NORM;
-
-
-
-		operation = pa_context_get_sink_info_by_name(context, defaultSinkName, temporaryCallback, &channelMap);
-		pa_operation_unref(operation);
-
-
-
-		pa_cvolume *setVolume = pa_cvolume_set(&newVolume, channelMap.channels, volume);
-
-
-
-		operation = pa_context_set_sink_volume_by_name(context, defaultSinkName, &newVolume, NULL, NULL);*/
-
-
-
-
-
-
-
-
-
-		/*! pa_context_set_state_callback(context, getState, NULL); */
-
-
-
-		/*! pa_operation_unref(operation);*/
+	volumeDownCommand:{
+		if(!pulseaudioEvent){
+			pulseaudioEvent = VOLUME_DOWN_PULSEAUDIO_EVENT;
+			pa_threaded_mainloop_signal(mainloop, 0);
+		}
 		jmp eventLoopCheckShortcuts;
 	}
 	muteCommand:{
-		pa_operation *const operation = pa_context_set_sink_mute_by_name(context, defaultSinkName, !mute, volumeChangeSuccess, NULL);
-
-
-
-		/*! pa_context_set_state_callback(context, getState, NULL); */
-
-
-
-		pa_operation_unref(operation);
+		if(!pulseaudioEvent){
+			pulseaudioEvent = MUTE_PULSEAUDIO_EVENT;
+			pa_threaded_mainloop_signal(mainloop, 0);
+		}
 		jmp eventLoopCheckShortcuts;
 	}
 	restartCommand:{
@@ -2512,6 +2562,14 @@ int main(int argumentAmount, const char *const *argument){
 		jmp eventLoopCheckShortcuts;
 	}
 	mainEmergencyExit:{
+
+
+
+		pa_threaded_mainloop_stop(mainloop);
+		pthread_join(pulseaudioThread, NULL);
+
+
+
 		free(event);
 		popPointer(eventToken);
 		free(monitorData);
@@ -2885,37 +2943,93 @@ SENSITIVESTRINGCOMPARE(){
 	but do research whether it's dynamic memory we're dealing with here or not
 
 	if we're gonna be using the pointer() functions here, we're gonna have to setup a cross-thread lock mechanism to prevent someone going in without precautions taken
+
+	mainloop and context popping causes error
 */
 
+#define IMAINLOOPFREE() /*----------*/ local int iMainloopFree(pa_threaded_mainloop *const mainloop)
+#define ICONTEXTDISCONNECTFREE() /*-*/ local int iContextDisconnectFree(pa_context *const context)
+#define IOPERATIONUNREF() /*--------*/ local int iOperationUnref(pa_operation *const operation)
+
+/*!
+IMAINLOOPFREE(){
+	pa_threaded_mainloop_free(mainloop);
+	ret 0;
+}
+ICONTEXTDISCONNECTFREE(){
+	pa_context_disconnect(context);
+	pa_context_unref(context);
+	ret 0;
+}
+IOPERATIONUNREF(){
+	pa_operation_unref(operation);
+	ret 0;
+}
+*/
 PULSEAUDIOSTART(){
+	#define PA_CONTEXT_NONE /*-*/ (0)
+	/*!uint mainloopToken = 0;
+	uint contextToken = 0;*/
+	uint ready = PA_CONTEXT_NONE;
 	(void)arg;
+	mainloop = NULL;
+	context = NULL;
 	jmp establishServerConnection;
 	establishServerConnection:{
-		mainloop = pa_mainloop_new();
-		api = pa_mainloop_get_api(mainloop);
-		context = pa_context_new(api, PROGRAM_NAME);
+		if(!(mainloop = pa_threaded_mainloop_new())){
+			jmp emergencyExit;
+		}
+
+
+
+		pa_threaded_mainloop_lock(mainloop);
+		pa_threaded_mainloop_start(mainloop);
+
+
+
+		if(!(context = pa_context_new_with_proplist(pa_threaded_mainloop_get_api(mainloop), PROGRAM_NAME, NULL))){
+			jmp emergencyExit;
+		}
+
+
+
 		if(pa_context_connect(context, NULL, PA_CONTEXT_NOFLAGS, NULL) == -1){
 			printTitledError("fatal pulseaudio error", "could not connect to pulseaudio");
 			jmp emergencyExit;
 		}
-		jmp checkContextReadiness;
-	}
-	checkContextReadiness:{
-		#define PA_CONTEXT_NONE /*-*/ (0)
-		uint ready = PA_CONTEXT_NONE;
+
+
+
 		pa_context_set_state_callback(context, getState, &ready);
-		checkContextReadinessLoop:{
-			pa_mainloop_prepare(mainloop, -1);
-			pa_mainloop_poll(mainloop);
-			pa_mainloop_dispatch(mainloop);
-			switch ready over
-				to PA_CONTEXT_NONE: /*-------*/ jmp checkContextReadinessLoop;
-				to PA_CONTEXT_READY: /*------*/ jmp getSinkInformation;
-				to PA_CONTEXT_TERMINATED: /*-*/ jmp contextTerminated;
-				off: /*----------------------*/ jmp contextFailed;
-			end
-		}
-		#undef  PA_CONTEXT_NONE
+
+
+
+/*!
+		mainloopToken = pushPointer(mainloop, "pulseaudio main loop pointer", iMainloopFree);
+		contextToken = pushPointer(context, "pulseaudio context pointer", iContextDisconnectFree);
+
+
+
+		popPointer(contextToken);
+		popPointer(mainloopToken);
+*/
+
+
+
+		pa_threaded_mainloop_unlock(mainloop);
+
+
+
+		jmp checkContextReadinessLoop;
+	}
+	checkContextReadinessLoop:{
+		pa_threaded_mainloop_wait(mainloop);
+		switch ready over
+			to PA_CONTEXT_NONE: /*-------*/ jmp checkContextReadinessLoop;
+			to PA_CONTEXT_READY: /*------*/ jmp getSinkInformation;
+			to PA_CONTEXT_TERMINATED: /*-*/ jmp contextTerminated;
+			off: /*----------------------*/ jmp contextFailed;
+		end
 	}
 	contextTerminated:{
 		printTitledError("fatal pulseaudio error", "context terminated");
@@ -2926,26 +3040,183 @@ PULSEAUDIOSTART(){
 		jmp emergencyExit;
 	}
 	getSinkInformation:{
-		pa_operation_unref(pa_context_get_server_info(context, getSinkName, NULL));
-		pa_operation_unref(pa_context_get_sink_info_by_name(context, defaultSinkName, firstGetSinkInfo, NULL));
+		pa_operation *operation = pa_context_get_server_info(context, getSinkName, NULL);
+/*!
+		uint token = pushPointer(operation, "pulseaudio server info pointer", iOperationUnref);
+*/
+		pa_operation_unref(operation);
+/*!
+		popPointer(token);
+*/
+		operation = pa_context_get_sink_info_by_name(context, defaultSinkName, firstGetSinkInfo, NULL);
+/*!
+		token = pushPointer(operation, "pulseaudio default sink info pointer", iOperationUnref);
+*/
+		pa_operation_unref(operation);
+/*!
+		popPointer(token);
+*/
 		jmp subscribeToEvents;
 	}
 	subscribeToEvents:{
-		pa_operation *operation = pa_context_subscribe(context, PA_SUBSCRIPTION_MASK_SINK, NULL, NULL);
+		pa_operation *const operation = pa_context_subscribe(context, PA_SUBSCRIPTION_MASK_SINK, NULL, NULL);
+/*!
+		uint token = pushPointer(operation, "pulseaudio subscription pointer", iOperationUnref);
+*/
 		pa_context_set_subscribe_callback(context, subscribeCallback, NULL);
 		pa_operation_unref(operation);
+/*!
+		popPointer(token);
+*/
+
+
+
+		pa_threaded_mainloop_lock(mainloop);
+
+
+
 		jmp eventLoop;
 	}
 	eventLoop:{
-		pa_mainloop_run(mainloop, NULL);
-		jmp emergencyExit;
+		pulseaudioEvent = NONE_PULSEAUDIO_EVENT;
+		pa_threaded_mainloop_wait(mainloop);
+		switch pulseaudioEvent over
+			to VOLUME_UP_PULSEAUDIO_EVENT:{
+
+
+
+				struct{
+					pa_cvolume /*-*/ volume;
+					bool /*-------*/ mute;
+				} data;
+
+
+
+				pa_cvolume newVolume;
+				pa_operation *operation = pa_context_get_sink_info_by_name(context, defaultSinkName, temporaryCallback, &data);
+				pa_threaded_mainloop_wait(mainloop);
+				pa_operation_unref(operation);
+
+
+
+				{
+					int percentage = (pa_cvolume_avg(&data.volume) + 1) * 100 / PA_VOLUME_NORM + volumeUpPercent;
+					if(percentage > 100){
+						percentage = 100;
+					}
+					newVolume = *pa_cvolume_set(&data.volume, data.volume.channels, PA_VOLUME_NORM * percentage / 100);
+				}
+
+
+
+				operation = pa_context_set_sink_volume_by_name(context, defaultSinkName, &newVolume, boolStatus, NULL);
+				pa_threaded_mainloop_wait(mainloop);
+				pa_operation_unref(operation);
+
+
+
+				jmp eventLoop;
+			}
+			to VOLUME_DOWN_PULSEAUDIO_EVENT:{
+
+
+
+				struct{
+					pa_cvolume /*-*/ volume;
+					bool /*-------*/ mute;
+				} data;
+
+
+
+				pa_cvolume newVolume;
+
+
+
+				pa_operation *operation = pa_context_get_sink_info_by_name(context, defaultSinkName, temporaryCallback, &data);
+
+
+
+				pa_threaded_mainloop_wait(mainloop);
+				pa_operation_unref(operation);
+
+
+
+				{
+					int percentage = (pa_cvolume_avg(&data.volume) + 1) * 100 / PA_VOLUME_NORM - volumeDownPercent;
+					if(percentage < 0){
+						percentage = 0;
+					}
+					newVolume = *pa_cvolume_set(&data.volume, data.volume.channels, PA_VOLUME_NORM * percentage / 100);
+				}
+
+
+
+				operation = pa_context_set_sink_volume_by_name(context, defaultSinkName, &newVolume, boolStatus, NULL);
+
+
+
+				pa_threaded_mainloop_wait(mainloop);
+				pa_operation_unref(operation);
+
+
+
+				jmp eventLoop;
+			}
+			to MUTE_PULSEAUDIO_EVENT:{
+
+
+
+				struct{
+					pa_cvolume /*-*/ volume;
+					bool /*-------*/ mute;
+				} data;
+				pa_operation *operation = pa_context_get_sink_info_by_name(context, defaultSinkName, temporaryCallback, &data);
+
+
+
+				pa_threaded_mainloop_wait(mainloop);
+				pa_operation_unref(operation);
+
+
+
+				operation = pa_context_set_sink_mute_by_name(context, defaultSinkName, !data.mute, boolStatus, NULL);
+
+
+
+				/*! uint token = pushPointer(operation, "pulseaudio set sink mute pointer", iOperationUnref); */
+
+
+
+				pa_threaded_mainloop_wait(mainloop);
+				pa_operation_unref(operation);
+
+
+
+				/*! popPointer(token); */
+
+
+
+				jmp eventLoop;
+			}
+			off:{
+
+
+
+				fprintf(stdout, "got a %u event\n", pulseaudioEvent);
+
+
+
+				jmp eventLoop;
+			}
+		end
 	}
 	emergencyExit:{
 		pa_context_disconnect(context);
 		pa_context_unref(context);
-		pa_mainloop_free(mainloop);
+		pa_threaded_mainloop_free(mainloop);
 		ret NULL;
 	}
+	#undef  PA_CONTEXT_NONE
 }
 GETSTATE(){
 	switch pa_context_get_state(context) over
@@ -2967,15 +3238,36 @@ SUBSCRIBECALLBACK(){
 		ret;
 	}
 	if((event & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_NEW){
-		pa_operation_unref(pa_context_get_server_info(context, getSinkName, NULL));
+		pa_operation *const operation = pa_context_get_server_info(context, getSinkName, NULL);
+/*!
+		uint token = pushPointer(operation, "pulseaudio subscription pointer", iOperationUnref);
+*/
+		pa_operation_unref(operation);
+/*!
+		popPointer(token);
+*/
 		ret;
 	}
 	if((event & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_REMOVE){
-		pa_operation_unref(pa_context_get_server_info(context, getSinkName, NULL));
+		pa_operation *const operation = pa_context_get_server_info(context, getSinkName, NULL);
+/*!
+		uint token = pushPointer(operation, "pulseaudio server info pointer", iOperationUnref);
+*/
+		pa_operation_unref(operation);
+/*!
+		popPointer(token);
+*/
 		ret;
 	}
 	if((event & PA_SUBSCRIPTION_EVENT_TYPE_MASK) == PA_SUBSCRIPTION_EVENT_CHANGE){
-		pa_operation_unref(pa_context_get_sink_info_by_name(context, defaultSinkName, getSinkInfo, NULL));
+		pa_operation *const operation = pa_context_get_sink_info_by_name(context, defaultSinkName, getSinkInfo, NULL);
+/*!
+		uint token = pushPointer(operation, "pulseaudio sink info pointer", iOperationUnref);
+*/
+		pa_operation_unref(operation);
+/*!
+		popPointer(token);
+*/
 		ret;
 	}
 	ret;
@@ -2983,7 +3275,7 @@ SUBSCRIBECALLBACK(){
 GETSINKNAME(){
 	(void)context;
 	(void)userdata;
-	defaultSinkName = (*si).default_sink_name;
+	defaultSinkName = (*info).default_sink_name;
 	ret;
 }
 FIRSTGETSINKINFO(){
@@ -2994,17 +3286,21 @@ FIRSTGETSINKINFO(){
 		ret;
 	}
 	if(!eol){
-		const int newVolume = (pa_cvolume_avg(&(*si).volume) + 1) * 100 / PA_VOLUME_NORM;
-		const bool newMute = (*si).mute;
-		oldMute = newMute;
-		mute = newMute;
+		const int newVolume = (pa_cvolume_avg(&(*info).volume) + 1) * 100 / PA_VOLUME_NORM;
+		mute = (*info).mute;
 		oldVolume = newVolume;
 		volume = newVolume;
-		localVolume = volume;
-		if(localVolume > 100){
-			localVolume = 100;
-		}elif(localVolume < 0){
-			localVolume = 0;
+		rangedOldVolume = oldVolume;
+		rangedVolume = volume;
+		if(rangedOldVolume > 100){
+			rangedOldVolume = 100;
+		}elif(rangedOldVolume < 0){
+			rangedOldVolume = 0;
+		}
+		if(rangedVolume > 100){
+			rangedVolume = 100;
+		}elif(rangedVolume < 0){
+			rangedVolume = 0;
 		}
 		ret;
 	}
@@ -3018,19 +3314,24 @@ GETSINKINFO(){
 		ret;
 	}
 	if(!eol){
-		const int newVolume = (pa_cvolume_avg(&(*si).volume) + 1) * 100 / PA_VOLUME_NORM;
-		const bool newMute = (*si).mute;
+		const int newVolume = (pa_cvolume_avg(&(*info).volume) + 1) * 100 / PA_VOLUME_NORM;
+		const bool newMute = (*info).mute;
 		if(newVolume != volume or newMute != mute){
 			const uint32 valueList = XCB_STACK_MODE_ABOVE;
-			oldMute = mute;
 			mute = newMute;
 			oldVolume = volume;
 			volume = newVolume;
-			localVolume = volume;
-			if(localVolume > 100){
-				localVolume = 100;
-			}elif(localVolume < 0){
-				localVolume = 0;
+			rangedOldVolume = oldVolume;
+			rangedVolume = volume;
+			if(rangedOldVolume > 100){
+				rangedOldVolume = 100;
+			}elif(rangedOldVolume < 0){
+				rangedOldVolume = 0;
+			}
+			if(rangedVolume > 100){
+				rangedVolume = 100;
+			}elif(rangedVolume < 0){
+				rangedVolume = 0;
 			}
 			switch whichMonitor over
 				to AllWhichMonitor: /*--------------*/ jmp allWhichMonitor;
@@ -3102,6 +3403,56 @@ GETSINKINFO(){
 	}
 	ret;
 }
+BOOLSTATUS(){
+	(void)context;
+	(void)success;
+	(void)userData;
+    pa_threaded_mainloop_signal(mainloop, 0);
+	ret;
+}
+TEMPORARYCALLBACK(){
+	(void)context;
+	if(eol < 0){
+		printTitledError("pulseaudio error", "could not get sink information");
+        pa_threaded_mainloop_signal(mainloop, 0);
+		ret;
+	}
+	if(!eol){
+		pa_cvolume *data = userData;
+		*(pa_cvolume *)userData = (*info).volume;
+		*(bool *)(data + 1) = (*info).mute;
+        pa_threaded_mainloop_signal(mainloop, 0);
+		ret;
+	}
+	ret;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 SETSTRINGROOT(){
 	#define DATA_BLOCK_SIZE /*-*/ (256)
 	(*root).dataSize = DATA_BLOCK_SIZE;
@@ -3742,9 +4093,6 @@ READCONFIG(){
 			jmp getStatementStart;
 		}
 		if(itemAmount > 1){
-			/*!
-				missing space between final argument and scope imminent
-			*/
 			printConfigError("scope argument error", "too many arguments", '{', true, true, true, false, configPath, statementLine, statementStart, statementWall, (void *)1, (void *)1, currentScopeInstructionList, currentScopeInstructionRoot, currentScopeInstructionData);
 			jmp getStatementStart;
 		}
@@ -4176,6 +4524,22 @@ READCONFIG(){
 			duration = integer0Return;
 			jmp getStatementStart;
 		}
+		if(instructionStart == useBlurInstruction){
+			if(integer0Return < 0 or integer0Return > 1){
+				printConfigError("integer domain error", "integer is not in [0, 1]", ';', true, true, true, false, configPath, statementLine, statementStart, statementWall, instructionStart, integer0Instruction, currentScopeInstructionList, currentScopeInstructionRoot, currentScopeInstructionData);
+				jmp getStatementStart;
+			}
+			blurUsed = integer0Return;
+			jmp getStatementStart;
+		}
+		if(instructionStart == incrementPercentangeInstruction){
+			volumeUpPercent = integer0Return;
+			jmp getStatementStart;
+		}
+		if(instructionStart == decrementPercentangeInstruction){
+			volumeDownPercent = integer0Return;
+			jmp getStatementStart;
+		}
 		if(instructionStart == setImageInstruction){
 			Image *pointer;
 			switch name0Return over
@@ -4190,22 +4554,25 @@ READCONFIG(){
 				free((*pointer).data);
 				popPointer((*pointer).dataToken);
 			}
+			imageReturn.direction = (*pointer).direction;
 			*pointer = imageReturn;
-
-
-
-			/*! (*pointer).x = integer0Return;
-			(*pointer).y = integer1Return; */
-
-
-
-			(*pointer).x = 0;
-			(*pointer).y = 0;
-
-
-
+			(*pointer).x = integer0Return;
+			(*pointer).y = integer1Return;
 			imageReturn.data = NULL;
 			imageReturn.dataToken = 0;
+			jmp getStatementStart;
+		}
+		if(instructionStart == setImageDirectionInstruction){
+			Image *pointer;
+			switch name0Return over
+				to 1: /*-*/ pointer = &muteImage; /*------*/ brk;
+				to 2: /*-*/ pointer = &unmuteImage; /*----*/ brk;
+				to 3: /*-*/ pointer = &incrementImage; /*-*/ brk;
+				to 4: /*-*/ pointer = &decrementImage; /*-*/ brk;
+				to 5: /*-*/ pointer = &overlayImage; /*---*/ brk;
+				off: /*--*/ pointer = &alphaMapImage; /*--*/ brk;
+			end
+			(*pointer).direction = integer0Return;
 			jmp getStatementStart;
 		}
 		if(instructionStart == overlayImageInstruction){
@@ -4218,20 +4585,9 @@ READCONFIG(){
 				to 5: /*-*/ pointer = &overlayImage; /*---*/ brk;
 				off: /*--*/ pointer = &alphaMapImage; /*--*/ brk;
 			end
-
-
-
-			/*! imageReturn.x = integer0Return;
-			imageReturn.y = integer1Return; */
-
-
-
-			imageReturn.x = 0;
-			imageReturn.y = 0;
-
-
-
-			overlay(UpLeft, &imageReturn, pointer);
+			imageReturn.x = integer0Return;
+			imageReturn.y = integer1Return;
+			overlay(imageReturn.direction, &imageReturn, pointer);
 			jmp getStatementStart;
 		}
 		if(instructionStart == grabKeycodeInstruction or instructionStart == executeGrabKeycodeSubInstruction){
@@ -4598,19 +4954,12 @@ MATCHNAMELIST(){
 		ret SuccessNameList;
 	}
 }
-
-
-
-/*! it's a piece of shit and doesn't work fully properly. 0 0 causes nan at macros */
-
-
-
 MATCHINTEGER(){
 	#define Level0JmpPoint /*-*/ (0)
 	#define Level1JmpPoint /*-*/ (1)
 	#define Level2JmpPoint /*-*/ (2)
 	char *current = *statementCurrent - 1;
-	int number;
+	int number = 0;
 	char op = '\0';
 	JmpPoint jmpPoint;
 	int i0 = 0;
@@ -4626,7 +4975,7 @@ MATCHINTEGER(){
 			jmp matchOperationReturnPoint;
 		}
 		switch *current over
-			to '\0': /*-*/ jmp matchWhitespace0Loop;
+			to '\0': /*-*/ jmp matchOperation;
 			to '\t': /*-*/ jmp matchWhitespace0Loop;
 			to '\n': /*-*/ jmp matchWhitespace0Loop;
 			to '\v': /*-*/ jmp matchWhitespace0Loop;
@@ -4659,7 +5008,7 @@ MATCHINTEGER(){
 		off: /*----*/ /*--------*/ jmp matchMacro;
 	end
 	formatCheck: switch *(inc current) over
-		to '\0': /*-*/ /*--------*/ jmp matchWhitespace1Loop;
+		to '\0': /*-*/ /*--------*/ jmp matchOperation;
 		to '\t': /*-*/ /*--------*/ jmp matchWhitespace1Loop;
 		to '\n': /*-*/ /*--------*/ jmp matchWhitespace1Loop;
 		to '\v': /*-*/ /*--------*/ jmp matchWhitespace1Loop;
@@ -4685,7 +5034,7 @@ MATCHINTEGER(){
 		off: /*-----*/ /*--------*/ jmp nonNumber;
 	end
 	matchBinaryLoop: switch *(inc current) over
-		to '\0': /*-*/ jmp matchWhitespace1Loop;
+		to '\0': /*-*/ jmp matchOperation;
 		to '\t': /*-*/ jmp matchWhitespace1Loop;
 		to '\n': /*-*/ jmp matchWhitespace1Loop;
 		to '\v': /*-*/ jmp matchWhitespace1Loop;
@@ -4701,7 +5050,7 @@ MATCHINTEGER(){
 		off: /*-----*/ jmp nonNumber;
 	end
 	matchOctalLoop: switch *(inc current) over
-		to '\0': /*-*/ jmp matchWhitespace1Loop;
+		to '\0': /*-*/ jmp matchOperation;
 		to '\t': /*-*/ jmp matchWhitespace1Loop;
 		to '\n': /*-*/ jmp matchWhitespace1Loop;
 		to '\v': /*-*/ jmp matchWhitespace1Loop;
@@ -4723,7 +5072,7 @@ MATCHINTEGER(){
 		off: /*-----*/ jmp nonNumber;
 	end
 	matchDecimalLoop: switch *(inc current) over
-		to '\0': /*-*/ jmp matchWhitespace1Loop;
+		to '\0': /*-*/ jmp matchOperation;
 		to '\t': /*-*/ jmp matchWhitespace1Loop;
 		to '\n': /*-*/ jmp matchWhitespace1Loop;
 		to '\v': /*-*/ jmp matchWhitespace1Loop;
@@ -4747,7 +5096,7 @@ MATCHINTEGER(){
 		off: /*-----*/ jmp nonNumber;
 	end
 	matchHexadecimalLoop: switch *(inc current) over
-		to '\0': /*-*/ jmp matchWhitespace1Loop;
+		to '\0': /*-*/ jmp matchOperation;
 		to '\t': /*-*/ jmp matchWhitespace1Loop;
 		to '\n': /*-*/ jmp matchWhitespace1Loop;
 		to '\v': /*-*/ jmp matchWhitespace1Loop;
@@ -4787,12 +5136,19 @@ MATCHINTEGER(){
 			jmp nonNumber;
 		}
 		if(macroRoot.returnedCounter < 5){
-			number = macroRoot.returnedCounter + 1;
-		}else{
+			number = macroRoot.returnedCounter;
+			inc number;
+		}elif(macroRoot.returnedCounter < 9){
 			number = macroRoot.returnedCounter - 5;
+		}elif(macroRoot.returnedCounter < 11){
+			number = macroRoot.returnedCounter - 9;
+		}elif(macroRoot.returnedCounter < 15){
+			number = macroRoot.returnedCounter - 11;
+		}else{
+			number = 0;
 		}
 		switch *current over
-			to '\0': /*-*/ jmp matchWhitespace1Loop;
+			to '\0': /*-*/ jmp matchOperation;
 			to '\t': /*-*/ jmp matchWhitespace1Loop;
 			to '\n': /*-*/ jmp matchWhitespace1Loop;
 			to '\v': /*-*/ jmp matchWhitespace1Loop;
@@ -4844,7 +5200,7 @@ MATCHINTEGER(){
 			jmp matchOperationReturnPoint;
 		}
 		switch *current over
-			to '\0': /*-*/ jmp matchWhitespace1Loop;
+			to '\0': /*-*/ jmp matchOperation;
 			to '\t': /*-*/ jmp matchWhitespace1Loop;
 			to '\n': /*-*/ jmp matchWhitespace1Loop;
 			to '\v': /*-*/ jmp matchWhitespace1Loop;
@@ -4854,16 +5210,13 @@ MATCHINTEGER(){
 			off: /*-----*/ jmp matchOperation;
 		end
 	}
-	matchOperation:{
-		op = '\0';
-		switch *current over
-			to '+': /*-*/ op = *current; jmp matchOperationReturnPoint;
-			to '-': /*-*/ op = *current; jmp matchOperationReturnPoint;
-			to '*': /*-*/ op = *current; jmp matchOperationReturnPoint;
-			to '/': /*-*/ op = *current; jmp matchOperationReturnPoint;
-			off: /*----*/ /*----------*/ jmp matchOperationReturnPoint;
-		end
-	}
+	matchOperation: switch *current over
+		to '+': /*-*/ op = *current; /*-*/ jmp matchOperationReturnPoint;
+		to '-': /*-*/ op = *current; /*-*/ jmp matchOperationReturnPoint;
+		to '*': /*-*/ op = *current; /*-*/ jmp matchOperationReturnPoint;
+		to '/': /*-*/ op = *current; /*-*/ jmp matchOperationReturnPoint;
+		off: /*----*/ op = '\0'; /*-----*/ jmp matchOperationReturnPoint;
+	end
 	matchOperationReturnPoint: switch jmpPoint over
 		to Level0JmpPoint: /*-*/ jmp switchOperation0;
 		to Level1JmpPoint: /*-*/ jmp switchOperation1;
@@ -4967,20 +5320,20 @@ MATCHINTEGER(){
 		jmp matchWhitespace0Loop;
 	}
 	validNumber:{
-		*statementCurrent = current;
+		*statementCurrent = current + 1;
 		*returnValue = i0;
 		ret ValidNumber;
 	}
 	nonNumber:{
-		*statementCurrent = current;
+		*statementCurrent = current + 1;
 		ret NonNumber;
 	}
 	overflownNumber:{
-		*statementCurrent = current;
+		*statementCurrent = current + 1;
 		ret OverflownNumber;
 	}
 	dividedByZeroNumber:{
-		*statementCurrent = current;
+		*statementCurrent = current + 1;
 		ret DividedByZeroNumber;
 	}
 	#undef  Level2JmpPoint
