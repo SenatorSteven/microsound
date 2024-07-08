@@ -143,27 +143,35 @@ SOFTWARE. */
 /*!}*/
 
 /*!defines:{*/
-	#define DEBUG /*-------------------------*/ (false)
+	#define DEBUG /*--------------------------*/ (false)
 
-	#define PROGRAM_NAME /*------------------*/ "microsound"
+	#define PROGRAM_NAME /*-------------------*/ "microsound"
 
-	#define STAT_PATH /*---------------------*/ ("/tmp/" PROGRAM_NAME)
-	#define DEFAULT_CONFIG_PATH /*-----------*/ ("/etc/" PROGRAM_NAME "/" PROGRAM_NAME ".conf")
+	#define PTHREAD_CREATE_SUCCESS /*---------*/ (0)
+	#define PTHREAD_MUTEX_INIT_SUCCESS /*-----*/ (0)
+	#define PTHREAD_MUTEX_LOCK_SUCCESS /*-----*/ (0)
+	#define PTHREAD_MUTEX_TRYLOCK_SUCCESS /*--*/ (0)
+	#define PTHREAD_MUTEX_UNLOCK_SUCCESS /*---*/ (0)
+	#define PTHREAD_MUTEX_DESTROY_SUCCESS /*--*/ (0)
+	#define PTHREAD_JOIN_SUCCESS /*-----------*/ (0)
 
-	#define _STRING_NODE_CHILDREN_AMOUNT /*--*/ (14)
-	#define STRING_NODE_CHILDREN_AMOUNT /*---*/ (_STRING_NODE_CHILDREN_AMOUNT > 28? 28 : _STRING_NODE_CHILDREN_AMOUNT)
-	#define SHORTCUT_CODE_AMOUNT /*----------*/ (256)
+	#define STAT_PATH /*----------------------*/ ("/tmp/" PROGRAM_NAME)
+	#define DEFAULT_CONFIG_PATH /*------------*/ ("/etc/" PROGRAM_NAME "/" PROGRAM_NAME ".conf")
 
-	#define DEFAULT_OUTPUT_STREAM /*---------*/ (stdout)
-	#define DEFAULT_ERROR_STREAM /*----------*/ (stderr)
+	#define _STRING_NODE_CHILDREN_AMOUNT /*---*/ (14)
+	#define STRING_NODE_CHILDREN_AMOUNT /*----*/ (_STRING_NODE_CHILDREN_AMOUNT > 28? 28 : _STRING_NODE_CHILDREN_AMOUNT)
+	#define SHORTCUT_CODE_AMOUNT /*-----------*/ (256)
 
-	#define MESSAGE_START /*-----------------*/ ("\x1b[1m")
-	#define MESSAGE_FATAL /*-----------------*/ ("\x1b[91m")
-	#define MESSAGE_ERROR /*-----------------*/ ("\x1b[33m")
-	#define MESSAGE_EVENT /*-----------------*/ ("\x1b[32m")
-	#define MESSAGE_END /*-------------------*/ ("\x1b[m")
+	#define DEFAULT_OUTPUT_STREAM /*----------*/ (stdout)
+	#define DEFAULT_ERROR_STREAM /*-----------*/ (stderr)
 
-	#define NUMBER_REGEX /*------------------*/ (" (([0][\\s]*[x][\\s]*([a-fA-F0-9][\\s]*)*|([0-9][\\s]*)+|[+*/][\\s]*)+)")
+	#define MESSAGE_START /*------------------*/ ("\x1b[1m")
+	#define MESSAGE_FATAL /*------------------*/ ("\x1b[91m")
+	#define MESSAGE_ERROR /*------------------*/ ("\x1b[33m")
+	#define MESSAGE_EVENT /*------------------*/ ("\x1b[32m")
+	#define MESSAGE_END /*--------------------*/ ("\x1b[m")
+
+	#define NUMBER_REGEX /*-------------------*/ (" (([0][\\s]*[x][\\s]*([a-fA-F0-9][\\s]*)*|([0-9][\\s]*)+|[+*/][\\s]*)+)")
 
 	#define UNRECOGNIZED_ARGUMENT /*----------*/ (0)
 	#define HELP_ARGUMENT /*------------------*/ (1)
@@ -212,72 +220,72 @@ SOFTWARE. */
 	#define RESTART_COMMAND /*----------------*/ (5)
 	#define EXIT_COMMAND /*-------------------*/ (6)
 
-	#define QUIT() /*------------------------*/ local void         quit(int signal)
-	#define GETSHAREDCHARACTER() /*----------*/ local int          getSharedCharacter(FILE *const configFile)
-	#define PRINTUNACCOUNTEDFORPOINTERS() /*-*/ local void         printUnaccountedForPointers(const Pointer *current, const Pointer *wall)
-	#define INITMEMORYMANAGER() /*-----------*/ local bool         initMemoryManager(void)
-	#define PUSHPOINTER() /*-----------------*/ local uint32      _pushPointer(void *const pointer, const char *const label, int (*const freeFunction)(void *))
-	#define POPPOINTER() /*------------------*/ local void         popPointer(const uint token)
-	#define UPDATEPOINTER() /*---------------*/ local void         updatePointer(const uint token, void *const pointer)
-	#define DELETEMEMORYMANAGER() /*---------*/ local void         deleteMemoryManager(void)
-	#define IFREE() /*-----------------------*/ local int          iFree(void *const pointer)
-	#define ISHMCTL() /*---------------------*/ local int          ishmctl(void *const pointer)
-	#define IXCBDISCONNECT() /*--------------*/ local int          iXCBDisconnect(void *const pointer)
-	#define SHMCONNECT() /*------------------*/ local void         shmConnect(void)
-	#define SHMDISCONNECT() /*---------------*/ local void         shmDisconnect(void)
-	#define IDENTIFYARGUMENT() /*------------*/ local uint8        identifyArgument(const char *p)
-	#define INSENSITIVESTRINGCOMPARE() /*----*/ local bool         insensitiveStringCompare(const char *s0, const char *s1)
-	#define SENSITIVESTRINGCOMPARE() /*------*/ local bool         sensitiveStringCompare(const char *s0, const char *s1)
-	#define PULSEAUDIOMAIN() /*--------------*/ local void *       pulseaudioMain(void *arg)
-	#define GETSTATE() /*--------------------*/ local void         getState(pa_context *const context, void *const userdata)
-	#define SUBSCRIBECALLBACK() /*-----------*/ local void         subscribeCallback(pa_context *const context, pa_subscription_event_type_t event, uint32 idx, void *const userdata)
-	#define GETSINKNAME() /*-----------------*/ local void         getSinkName(pa_context *const context, const pa_server_info *const serverInfo, void *const userdata)
-	#define FIRSTGETSINKINFOCALLBACK() /*----*/ local void         firstGetSinkInfoCallback(pa_context *const context, const pa_sink_info *const sinkInfo, const int eol, void *const userdata)
-	#define GETSINKINFO() /*-----------------*/ local void         getSinkInfo(pa_context *const context, const pa_sink_info *const sinkInfo, const int eol, void *const userdata)
-	#define BOOLSTATUS() /*------------------*/ local void         boolStatus(pa_context *const context, const int success, void *const userData)
-	#define TEMPORARYCALLBACK() /*-----------*/ local void         temporaryCallback(pa_context *const context, const pa_sink_info *const sinkInfo, const int eol, void *const userData)
-	#define SETSTRINGROOT() /*---------------*/ local void         setStringRoot(StringNodeRoot *root)
-	#define BULKINSERTSTRING() /*------------*/ local void         bulkInsertString(StringNodeRoot *root, const char *const *current)
-	#define INSERTSTRING() /*----------------*/ local bool         insertString(StringNodeRoot *root, const char *string)
-	#define GETSTRINGNODE() /*---------------*/ local StringNode * getStringNode(StringNodeRoot *const root, const char **const stringReturn)
-	#define DELETESTRINGROOT() /*------------*/ local void         deleteStringRoot(StringNodeRoot *root)
-	#define SETSHORTCUTROOT() /*-------------*/ local void         setShortcutRoot(ShortcutNodeRoot *root)
-	#define INSERTSHORTCUT() /*--------------*/ local bool         insertShortcut(ShortcutNodeRoot *root, const uint8 code, const uint16 modifier, const uint8 command, char *const string, const uint stringToken)
-	#define REMOVESHORTCUT() /*--------------*/ local bool         removeShortcut(ShortcutNodeRoot *root, const uint8 code, const uint16 modifier)
-	#define RESETSHORTCUTROOT() /*-----------*/ local void         resetShortcutRoot(ShortcutNodeRoot *root)
-	#define DELETESHORTCUTROOT() /*----------*/ local void         deleteShortcutRoot(ShortcutNodeRoot *root)
-	#define UNGRABSHORTCUTS() /*-------------*/ local void         ungrabShortcuts(void)
-	#define READCONFIG() /*------------------*/ local void         readConfig(const bool createConfigFile, const char *const configPath, int (*getConfigChar)(FILE *file))
-	#define MATCHNAMELIST() /*---------------*/ local uint8        matchNameList(StringNodeRoot *const root, const char *const statementWall, char **statementCurrentReturn, uint8 *const valueReturn)
-	#define MATCHINTEGER() /*----------------*/ local uint8        matchInteger(char **statementCurrent, const char *const statementWall, int *const returnValue)
-	#define MATCHSTRING() /*-----------------*/ local bool         matchString(char **statementCurrent, char **stringReturn, uint *stringToken)
-	#define MATCHEXECUTE() /*----------------*/ local bool         matchExecute(char **statementCurrent, char **executeReturn, uint *executeToken)
-	#define READIMAGE() /*-------------------*/ local uint8        readImage(const char *const path, const char **errorMessage, Image *image)
-	#define EXEC() /*------------------------*/ local void         exec(const char *const string)
-	#define GETPOINTERMONITOR() /*-----------*/ local Monitor *    getPointerMonitor(void)
-	#define PRINTERROR() /*------------------*/ local void         printError(const char *const message, ...)
-	#define PRINTTITLEDERROR() /*------------*/ local void         printTitledError(const char *const title, const char *const message)
-	#define PRINTTITLEDQUOTEDERROR() /*------*/ local void         printTitledQuotedError(const char *const title, const char *const argument, const char *const message)
-	#define PRINTCONNECTIONERROR() /*--------*/ local void         printConnectionError(void)
-	#define PRINTTITLEDNAMEDERROR() /*-------*/ local void         printTitledNamedError(const char *const title, const char *const message, const char *const name)
-	#define PRINTERROREVENT() /*-------------*/ local void         printErrorEvent(const void *const event)
-	#define PRINTTITLEDVALUEDERROR() /*------*/ local void         printTitledValuedError(const char *const title, const char *const message, const uint value)
-	#define PRINTCONFIGERROR() /*------------*/ local void         printConfigError(const char *const type, const char *const message, const char finalStatementCharacter, const bool printLine, const bool printConfig, const bool printPointer, const bool printPattern, const char *const configPath, const uint statementLine, const char *const statementStart, const char *const statementWall, const Instruction *instructionStart, const Instruction *instructionCurrent, const char *const *currentScopeInstructionList, const StringNodeRoot *const currentScopeInstructionRoot, StringNodeRoot *const *const *currentScopeInstructionData)
-	#define OPENERRORSTREAM() /*-------------*/ local bool         openErrorStream(void)
-	#define CLOSEERRORSTREAM() /*------------*/ local void         closeErrorStream(void)
+	#define QUIT() /*-------------------------*/ local void         quit(int signal)
+	#define GETSHAREDCHARACTER() /*-----------*/ local int          getSharedCharacter(FILE *const configFile)
+	#define PRINTUNACCOUNTEDFORPOINTERS() /*--*/ local void         printUnaccountedForPointers(const Pointer *current, const Pointer *wall)
+	#define INITMEMORYMANAGER() /*------------*/ local bool         initMemoryManager(void)
+	#define PUSHPOINTER() /*------------------*/ local uint32      _pushPointer(void *const pointer, const char *const label, int (*const freeFunction)(void *))
+	#define POPPOINTER() /*-------------------*/ local void         popPointer(const uint token)
+	#define UPDATEPOINTER() /*----------------*/ local void         updatePointer(const uint token, void *const pointer)
+	#define DELETEMEMORYMANAGER() /*----------*/ local void         deleteMemoryManager(void)
+	#define IFREE() /*------------------------*/ local int          iFree(void *const pointer)
+	#define ISHMCTL() /*----------------------*/ local int          ishmctl(void *const pointer)
+	#define IXCBDISCONNECT() /*---------------*/ local int          iXCBDisconnect(void *const pointer)
+	#define SHMCONNECT() /*-------------------*/ local void         shmConnect(void)
+	#define SHMDISCONNECT() /*----------------*/ local void         shmDisconnect(void)
+	#define IDENTIFYARGUMENT() /*-------------*/ local uint8        identifyArgument(const char *p)
+	#define INSENSITIVESTRINGCOMPARE() /*-----*/ local bool         insensitiveStringCompare(const char *s0, const char *s1)
+	#define SENSITIVESTRINGCOMPARE() /*-------*/ local bool         sensitiveStringCompare(const char *s0, const char *s1)
+	#define PULSEAUDIOMAIN() /*---------------*/ local void *       pulseaudioMain(void *arg)
+	#define GETSTATE() /*---------------------*/ local void         getState(pa_context *const context, void *const userdata)
+	#define SUBSCRIBECALLBACK() /*------------*/ local void         subscribeCallback(pa_context *const context, pa_subscription_event_type_t event, uint32 idx, void *const userdata)
+	#define GETSINKNAME() /*------------------*/ local void         getSinkName(pa_context *const context, const pa_server_info *const serverInfo, void *const userdata)
+	#define FIRSTGETSINKINFOCALLBACK() /*-----*/ local void         firstGetSinkInfoCallback(pa_context *const context, const pa_sink_info *const sinkInfo, const int eol, void *const userdata)
+	#define GETSINKINFO() /*------------------*/ local void         getSinkInfo(pa_context *const context, const pa_sink_info *const sinkInfo, const int eol, void *const userdata)
+	#define BOOLSTATUS() /*-------------------*/ local void         boolStatus(pa_context *const context, const int success, void *const userData)
+	#define TEMPORARYCALLBACK() /*------------*/ local void         temporaryCallback(pa_context *const context, const pa_sink_info *const sinkInfo, const int eol, void *const userData)
+	#define SETSTRINGROOT() /*----------------*/ local void         setStringRoot(StringNodeRoot *root)
+	#define BULKINSERTSTRING() /*-------------*/ local void         bulkInsertString(StringNodeRoot *root, const char *const *current)
+	#define INSERTSTRING() /*-----------------*/ local bool         insertString(StringNodeRoot *root, const char *string)
+	#define GETSTRINGNODE() /*----------------*/ local StringNode * getStringNode(StringNodeRoot *const root, const char **const stringReturn)
+	#define DELETESTRINGROOT() /*-------------*/ local void         deleteStringRoot(StringNodeRoot *root)
+	#define SETSHORTCUTROOT() /*--------------*/ local void         setShortcutRoot(ShortcutNodeRoot *root)
+	#define INSERTSHORTCUT() /*---------------*/ local bool         insertShortcut(ShortcutNodeRoot *root, const uint8 code, const uint16 modifier, const uint8 command, char *const string, const uint stringToken)
+	#define REMOVESHORTCUT() /*---------------*/ local bool         removeShortcut(ShortcutNodeRoot *root, const uint8 code, const uint16 modifier)
+	#define RESETSHORTCUTROOT() /*------------*/ local void         resetShortcutRoot(ShortcutNodeRoot *root)
+	#define DELETESHORTCUTROOT() /*-----------*/ local void         deleteShortcutRoot(ShortcutNodeRoot *root)
+	#define UNGRABSHORTCUTS() /*--------------*/ local void         ungrabShortcuts(void)
+	#define READCONFIG() /*-------------------*/ local void         readConfig(const bool createConfigFile, const char *const configPath, int (*getConfigChar)(FILE *file))
+	#define MATCHNAMELIST() /*----------------*/ local uint8        matchNameList(StringNodeRoot *const root, const char *const statementWall, char **statementCurrentReturn, uint8 *const valueReturn)
+	#define MATCHINTEGER() /*-----------------*/ local uint8        matchInteger(char **statementCurrent, const char *const statementWall, int *const returnValue)
+	#define MATCHSTRING() /*------------------*/ local bool         matchString(char **statementCurrent, char **stringReturn, uint *stringToken)
+	#define MATCHEXECUTE() /*-----------------*/ local bool         matchExecute(char **statementCurrent, char **executeReturn, uint *executeToken)
+	#define READIMAGE() /*--------------------*/ local uint8        readImage(const char *const path, const char **errorMessage, Image *image)
+	#define EXEC() /*-------------------------*/ local void         exec(const char *const string)
+	#define GETPOINTERMONITOR() /*------------*/ local Monitor *    getPointerMonitor(void)
+	#define PRINTERROR() /*-------------------*/ local void         printError(const char *const message, ...)
+	#define PRINTTITLEDERROR() /*-------------*/ local void         printTitledError(const char *const title, const char *const message)
+	#define PRINTTITLEDQUOTEDERROR() /*-------*/ local void         printTitledQuotedError(const char *const title, const char *const argument, const char *const message)
+	#define PRINTCONNECTIONERROR() /*---------*/ local void         printConnectionError(void)
+	#define PRINTTITLEDNAMEDERROR() /*--------*/ local void         printTitledNamedError(const char *const title, const char *const message, const char *const name)
+	#define PRINTERROREVENT() /*--------------*/ local void         printErrorEvent(const void *const event)
+	#define PRINTTITLEDVALUEDERROR() /*-------*/ local void         printTitledValuedError(const char *const title, const char *const message, const uint value)
+	#define PRINTCONFIGERROR() /*-------------*/ local void         printConfigError(const char *const type, const char *const message, const char finalStatementCharacter, const bool printLine, const bool printConfig, const bool printPointer, const bool printPattern, const char *const configPath, const uint statementLine, const char *const statementStart, const char *const statementWall, const Instruction *instructionStart, const Instruction *instructionCurrent, const char *const *currentScopeInstructionList, const StringNodeRoot *const currentScopeInstructionRoot, StringNodeRoot *const *const *currentScopeInstructionData)
+	#define OPENERRORSTREAM() /*--------------*/ local bool         openErrorStream(void)
+	#define CLOSEERRORSTREAM() /*-------------*/ local void         closeErrorStream(void)
 
-	#define xcb_wait_for_reply(a, b, c) /*---*/ (xcb_wait_for_reply(a, (b).sequence, c))
-	#define xcb_send_event(a, b, c, d, e) /*-*/ (xcb_send_event(a, b, c, d, (void *)(e)))
+	#define xcb_wait_for_reply(a, b, c) /*----*/ (xcb_wait_for_reply(a, (b).sequence, c))
+	#define xcb_send_event(a, b, c, d, e) /*--*/ (xcb_send_event(a, b, c, d, (void *)(e)))
 
-	#define SELF(self) /*--------------------*/ self
-	#define LITERAL_LENGTH(l) /*-------------*/ (sizeof(l) - 1)
-	#define ARRAY_SIZE(a) /*-----------------*/ (sizeof(a) / sizeof(*a))
-	#define STRING_ARRAY_SIZE(a) /*----------*/ (ARRAY_SIZE(a) - 1)
+	#define SELF(self) /*---------------------*/ self
+	#define LITERAL_LENGTH(l) /*--------------*/ (sizeof(l) - 1)
+	#define ARRAY_SIZE(a) /*------------------*/ (sizeof(a) / sizeof(*a))
+	#define STRING_ARRAY_SIZE(a) /*-----------*/ (ARRAY_SIZE(a) - 1)
 
-	#define pushPointer(a, b, c) /*----------*/ (_pushPointer(a, b, (int (*const)(void *))(c)))
-	#define findString(a, b) /*--------------*/ (!getStringNode(a, (const char **const)(b)))
+	#define pushPointer(a, b, c) /*-----------*/ (_pushPointer(a, b, (int (*const)(void *))(c)))
+	#define findString(a, b) /*---------------*/ (!getStringNode(a, (const char **const)(b)))
 
-	#define setJmpPoint(j) /*----------------*/ (jmpPoint = j##JmpPoint)
+	#define setJmpPoint(j) /*-----------------*/ (jmpPoint = j##JmpPoint)
 
 	#if DEBUG
 		#define printXEvent(void) /*----------*/ (fprintf(DEFAULT_OUTPUT_STREAM, "%s%s: %sevent:%s %s\n", colorStart, programName, colorEvent, colorEnd, (*event).response_type == randrBaseEvent + XCB_RANDR_SCREEN_CHANGE_NOTIFY? "screen change" : *(eventName + (((*event).response_type &= ~b(10000000)) > 35? ARRAY_SIZE(eventName) - 1 : (*event).response_type))))
@@ -1536,7 +1544,7 @@ int main(int argumentAmount, const char *const *argument){
 		eventToken /*----------------*/ = 0;
 		exposeEvent.response_type /*-*/ = XCB_EXPOSE;
 		exposeEvent.count /*---------*/ = 0;
-		if(pthread_mutex_init(&pushPointerLock, NULL)){
+		if(pthread_mutex_init(&pushPointerLock, NULL) != PTHREAD_MUTEX_INIT_SUCCESS){
 			printTitledError("pthread error", "could not init popPointer() mutex");
 			ret 0;
 		}
@@ -1755,7 +1763,7 @@ int main(int argumentAmount, const char *const *argument){
 	}
 	startConcurrentThreads:{
 		pulseaudioEvent = NONE_PULSEAUDIO_EVENT;
-		if(pthread_create(&pulseaudioThread, NULL, pulseaudioMain, NULL)){
+		if(pthread_create(&pulseaudioThread, NULL, pulseaudioMain, NULL) != PTHREAD_CREATE_SUCCESS){
 			printTitledError("pthread error", "could not create pulseaudio thread");
 		}
 		jmp establishServerConnection;
@@ -2560,8 +2568,10 @@ int main(int argumentAmount, const char *const *argument){
 		if(mainloop){
 			pa_threaded_mainloop_stop(mainloop);
 		}
-		if(pulseaudioThread and pthread_join(pulseaudioThread, NULL)){
-			printTitledError("pthread error", "could not join pulseaudio thread");
+		if(pulseaudioThread){
+			if(pthread_join(pulseaudioThread, NULL) != PTHREAD_JOIN_SUCCESS){
+				printTitledError("pthread error", "could not join pulseaudio thread");
+			}
 		}
 		free(event);
 		popPointer(eventToken);
@@ -2584,7 +2594,7 @@ int main(int argumentAmount, const char *const *argument){
 			printUnaccountedForPointers(dynamicDataSegment.data + 1, dynamicDataSegment.data + dynamicDataSegment.allocated);
 		}
 		deleteMemoryManager();
-		if(pthread_mutex_destroy(&pushPointerLock)){
+		if(pthread_mutex_destroy(&pushPointerLock) != PTHREAD_MUTEX_DESTROY_SUCCESS){
 			printTitledError("pthread error", "could not destroy popPointer() mutex");
 		}
 		closeErrorStream();
@@ -2604,7 +2614,7 @@ QUIT(){
 			}
 			printTitledNamedError("quitting error", "could not free", labelExamined);
 			deleteMemoryManager();
-			if(pthread_mutex_destroy(&pushPointerLock)){
+			if(pthread_mutex_destroy(&pushPointerLock) != PTHREAD_MUTEX_DESTROY_SUCCESS){
 				printTitledError("pthread error", "could not destroy popPointer() mutex");
 			}
 			closeErrorStream();
@@ -2655,7 +2665,7 @@ QUIT(){
 		printTitledError("signal received", message);
 		if(dynamicDataSegment.allocated <= 1){
 			deleteMemoryManager();
-			if(pthread_mutex_destroy(&pushPointerLock)){
+			if(pthread_mutex_destroy(&pushPointerLock) != PTHREAD_MUTEX_DESTROY_SUCCESS){
 				printTitledError("pthread error", "could not destroy popPointer() mutex");
 			}
 			closeErrorStream();
@@ -2687,7 +2697,7 @@ QUIT(){
 			jmp freePointedVariablesLoop;
 		}
 		deleteMemoryManager();
-		if(pthread_mutex_destroy(&pushPointerLock)){
+		if(pthread_mutex_destroy(&pushPointerLock) != PTHREAD_MUTEX_DESTROY_SUCCESS){
 			printTitledError("pthread error", "could not destroy popPointer() mutex");
 		}
 		closeErrorStream();
@@ -2733,7 +2743,7 @@ INITMEMORYMANAGER(){
 }
 PUSHPOINTER(){
 	uint32 token;
-    if(pthread_mutex_lock(&pushPointerLock)){
+    if(pthread_mutex_lock(&pushPointerLock) != PTHREAD_MUTEX_LOCK_SUCCESS){
 		printTitledError("pthread error", "could not lock popPointer() mutex");
 		ret 0;
 	}
@@ -2754,7 +2764,7 @@ PUSHPOINTER(){
 	(*(s.data + token)).token = token;
 	(*(s.data + token)).free = freeFunction;
 	inc s.allocated;
-    if(pthread_mutex_unlock(&pushPointerLock)){
+    if(pthread_mutex_unlock(&pushPointerLock) != PTHREAD_MUTEX_UNLOCK_SUCCESS){
 		printTitledError("pthread error", "could not unlock popPointer() mutex");
 	}
 	ret token;
