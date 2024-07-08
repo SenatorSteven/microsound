@@ -55,6 +55,25 @@
 	what if the user puts the program on (0, 0)? the sample for the blur won't work properly
 */
 
+/*!
+	has crashed for no reason in the past
+*/
+
+/*!
+	has ignored headphones' input in the past
+*/
+
+/*!
+	consider allowing the window manager to move the windows (use atoms)
+	maybe therefore remove override redirect
+*/
+
+/*!
+	consider commanding the windows to map and then at will commanding them to unmap
+
+	what happens when reading config while the windows are showing?
+*/
+
 
 
 
@@ -146,112 +165,106 @@ SOFTWARE. */
 
 	#define NUMBER_REGEX /*------------------*/ (" (([0][\\s]*[x][\\s]*([a-fA-F0-9][\\s]*)*|([0-9][\\s]*)+|[+*/][\\s]*)+)")
 
-	#define UnrecognizedArgument /*----------*/ (0)
-	#define HelpArgument /*------------------*/ (1)
-	#define StdoutArgument /*----------------*/ (2)
-	#define StderrArgument /*----------------*/ (3)
-	#define ConfigArgument /*----------------*/ (4)
-	#define ErrorArgument /*-----------------*/ (5)
-	#define ServerArgument /*----------------*/ (6)
+	#define UNRECOGNIZED_ARGUMENT /*----------*/ (0)
+	#define HELP_ARGUMENT /*------------------*/ (1)
+	#define STDOUT_ARGUMENT /*----------------*/ (2)
+	#define STDERR_ARGUMENT /*----------------*/ (3)
+	#define CONFIG_ARGUMENT /*----------------*/ (4)
+	#define ERROR_ARGUMENT /*-----------------*/ (5)
+	#define SERVER_ARGUMENT /*----------------*/ (6)
 
-	#define NoneInstruction /*---------------*/ (0)
-	#define NameInstruction /*---------------*/ (1 << 0)
-	#define NameListInstruction /*-----------*/ (1 << 1)
-	#define NumberInstruction /*-------------*/ (1 << 2)
-	#define StringInstruction /*-------------*/ (1 << 3)
-	#define ExecuteInstruction /*------------*/ (1 << 4)
-	#define ImageInstruction /*--------------*/ (1 << 5)
-	#define EndInstruction /*----------------*/ (1 << 6)
+	#define NONE_INSTRUCTION /*---------------*/ (0)
+	#define NAME_INSTRUCTION /*---------------*/ (1 << 0)
+	#define NAME_LIST_INSTRUCTION /*----------*/ (1 << 1)
+	#define NUMBER_INSTRUCTION /*-------------*/ (1 << 2)
+	#define STRING_INSTRUCTION /*-------------*/ (1 << 3)
+	#define EXECUTE_INSTRUCTION /*------------*/ (1 << 4)
+	#define IMAGE_INSTRUCTION /*--------------*/ (1 << 5)
+	#define END_INSTRUCTION /*----------------*/ (1 << 6)
 
-	#define SuccessNameList /*---------------*/ (0)
-	#define InvalidNameNameList /*-----------*/ (1)
-	#define PrematureEndNameList /*----------*/ (2)
+	#define SUCCESS_NAME_LIST /*--------------*/ (0)
+	#define INVALID_NAME_NAME_LIST /*---------*/ (1)
+	#define PREMATURE_END_NAME_LIST /*--------*/ (2)
 
-	#define ValidNumber /*-------------------*/ (0)
-	#define NonNumber /*---------------------*/ (1)
-	#define OverflownNumber /*---------------*/ (2)
-	#define DividedByZeroNumber /*-----------*/ (3)
+	#define VALID_NUMBER /*-------------------*/ (0)
+	#define NON_NUMBER /*---------------------*/ (1)
+	#define OVERFLOWN_NUMBER /*---------------*/ (2)
+	#define DIVIDED_BY_ZERO_NUMBER /*---------*/ (3)
 
-	#define CannotOpenReadConfig /*----------*/ (0)
-	#define CannotReadReadConfig /*----------*/ (1)
-	#define UnsupportedFormatReadConfig /*---*/ (2)
-	#define BadHeaderReadConfig /*-----------*/ (3)
-	#define BadDepthReadConfig /*------------*/ (4)
-	#define BadCompressionReadConfig /*------*/ (5)
-	#define UnsupportedHeightReadConfig /*---*/ (6)
-	#define BadSizeReadConfig /*-------------*/ (7)
-	#define FailedReadConfig /*--------------*/ (8)
-	#define BadPixelsReadConfig /*-----------*/ (9)
-	#define BadImageReadConfig /*------------*/ (10)
-	#define SuccessReadConfig /*-------------*/ (11)
+	#define CANNOT_OPEN_READ_CONFIG /*--------*/ (0)
+	#define CANNOT_READ_READ_CONFIG /*--------*/ (1)
+	#define UNSUPPORTED_FORMAT_READ_CONFIG /*-*/ (2)
+	#define BAD_HEADER_READ_CONFIG /*---------*/ (3)
+	#define BAD_DEPTH_READ_CONFIG /*----------*/ (4)
+	#define BAD_COMPRESSION_READ_CONFIG /*----*/ (5)
+	#define UNSUPPORTED_HEIGHT_READ_CONFIG /*-*/ (6)
+	#define BAD_SIZE_READ_CONFIG /*-----------*/ (7)
+	#define FAILED_READ_CONFIG /*-------------*/ (8)
+	#define BAD_PIXELS_READ_CONFIG /*---------*/ (9)
+	#define BAD_IMAGE_READ_CONFIG /*----------*/ (10)
+	#define SUCCESS_READ_CONFIG /*------------*/ (11)
 
-	#define NoneCommand /*-------------------*/ (0)
-	#define ExecuteCommand /*----------------*/ (1)
-	#define VolumeUpCommand /*---------------*/ (2)
-	#define VolumeDownCommand /*-------------*/ (3)
-	#define MuteCommand /*-------------------*/ (4)
-	#define RestartCommand /*----------------*/ (5)
-	#define ExitCommand /*-------------------*/ (6)
+	#define NONE_COMMAND /*-------------------*/ (0)
+	#define EXECUTE_COMMAND /*----------------*/ (1)
+	#define VOLUME_UP_COMMAND /*--------------*/ (2)
+	#define VOLUME_DOWN_COMMAND /*------------*/ (3)
+	#define MUTE_COMMAND /*-------------------*/ (4)
+	#define RESTART_COMMAND /*----------------*/ (5)
+	#define EXIT_COMMAND /*-------------------*/ (6)
 
-	#define QUIT() /*------------------------*/ local void        quit(int signal)
-	#define GETSHAREDCHARACTER() /*----------*/ local int         getSharedCharacter(FILE *const configFile)
-	#define PRINTUNACCOUNTEDFORPOINTERS() /*-*/ local void        printUnaccountedForPointers(const Pointer *current, const Pointer *wall)
-	#define INITMEMORYMANAGER() /*-----------*/ local bool        initMemoryManager(void)
-	#define PUSHPOINTER() /*-----------------*/ local uint32     _pushPointer(void *const pointer, const char *const label, int (*const freeFunction)(void *))
-	#define POPPOINTER() /*------------------*/ local void        popPointer(const uint token)
-	#define UPDATEPOINTER() /*---------------*/ local void        updatePointer(const uint token, void *const pointer)
-	#define DELETEMEMORYMANAGER() /*---------*/ local void        deleteMemoryManager(void)
-	#define IFREE() /*-----------------------*/ local int         iFree(void *const pointer)
-	#define ISHMCTL() /*---------------------*/ local int         ishmctl(void *const pointer)
-	#define IXCBDISCONNECT() /*--------------*/ local int         iXCBDisconnect(void *const pointer)
-	#define SHMCONNECT() /*------------------*/ local void        shmConnect(void)
-	#define SHMDISCONNECT() /*---------------*/ local void        shmDisconnect(void)
-	#define IDENTIFYARGUMENT() /*------------*/ local uint8       identifyArgument(const char *p)
-	#define INSENSITIVESTRINGCOMPARE() /*----*/ local bool        insensitiveStringCompare(const char *s0, const char *s1)
-	#define SENSITIVESTRINGCOMPARE() /*------*/ local bool        sensitiveStringCompare(const char *s0, const char *s1)
-
-
-
-	#define PULSEAUDIOMAIN() /*--------------*/ local void       *pulseaudioMain(void *arg)
-	#define GETSTATE() /*--------------------*/ local void        getState(pa_context *const context, void *const userdata)
-	#define SUBSCRIBECALLBACK() /*-----------*/ local void        subscribeCallback(pa_context *const context, pa_subscription_event_type_t event, uint32 idx, void *const userdata)
-	#define GETSINKNAME() /*-----------------*/ local void        getSinkName(pa_context *const context, const pa_server_info *const serverInfo, void *const userdata)
-	#define FIRSTGETSINKINFOCALLBACK() /*----*/ local void        firstGetSinkInfoCallback(pa_context *const context, const pa_sink_info *const sinkInfo, const int eol, void *const userdata)
-	#define GETSINKINFO() /*-----------------*/ local void        getSinkInfo(pa_context *const context, const pa_sink_info *const sinkInfo, const int eol, void *const userdata)
-	#define BOOLSTATUS() /*------------------*/ local void        boolStatus(pa_context *const context, const int success, void *const userData)
-	#define TEMPORARYCALLBACK() /*-----------*/ local void        temporaryCallback(pa_context *const context, const pa_sink_info *const sinkInfo, const int eol, void *const userData)
-
-
-
-	#define SETSTRINGROOT() /*---------------*/ local void        setStringRoot(StringNodeRoot *root)
-	#define BULKINSERTSTRING() /*------------*/ local void        bulkInsertString(StringNodeRoot *root, const char *const *current)
-	#define INSERTSTRING() /*----------------*/ local bool        insertString(StringNodeRoot *root, const char *string)
-	#define GETSTRINGNODE() /*---------------*/ local StringNode *getStringNode(StringNodeRoot *const root, const char **const stringReturn)
-	#define DELETESTRINGROOT() /*------------*/ local void        deleteStringRoot(StringNodeRoot *root)
-	#define SETSHORTCUTROOT() /*-------------*/ local void        setShortcutRoot(ShortcutNodeRoot *root)
-	#define INSERTSHORTCUT() /*--------------*/ local bool        insertShortcut(ShortcutNodeRoot *root, const uint8 code, const uint16 modifier, const uint8 command, char *const string, const uint stringToken)
-	#define REMOVESHORTCUT() /*--------------*/ local bool        removeShortcut(ShortcutNodeRoot *root, const uint8 code, const uint16 modifier)
-	#define RESETSHORTCUTROOT() /*-----------*/ local void        resetShortcutRoot(ShortcutNodeRoot *root)
-	#define DELETESHORTCUTROOT() /*----------*/ local void        deleteShortcutRoot(ShortcutNodeRoot *root)
-	#define UNGRABSHORTCUTS() /*-------------*/ local void        ungrabShortcuts(void)
-	#define READCONFIG() /*------------------*/ local void        readConfig(const bool createConfigFile, const char *const configPath, int (*getConfigChar)(FILE *file))
-	#define MATCHNAMELIST() /*---------------*/ local uint8       matchNameList(StringNodeRoot *const root, const char *const statementWall, char **statementCurrentReturn, uint8 *const valueReturn)
-	#define MATCHINTEGER() /*----------------*/ local uint8       matchInteger(char **statementCurrent, const char *const statementWall, int *const returnValue)
-	#define MATCHSTRING() /*-----------------*/ local bool        matchString(char **statementCurrent, char **stringReturn, uint *stringToken)
-	#define MATCHEXECUTE() /*----------------*/ local bool        matchExecute(char **statementCurrent, char **executeReturn, uint *executeToken)
-	#define READIMAGE() /*-------------------*/ local uint8       readImage(const char *const path, const char **errorMessage, Image *image)
-	#define EXEC() /*------------------------*/ local void        exec(const char *const string)
-	#define GETPOINTERMONITOR() /*-----------*/ local Monitor    *getPointerMonitor(void)
-	#define PRINTERROR() /*------------------*/ local void        printError(const char *const message, ...)
-	#define PRINTTITLEDERROR() /*------------*/ local void        printTitledError(const char *const title, const char *const message)
-	#define PRINTTITLEDQUOTEDERROR() /*------*/ local void        printTitledQuotedError(const char *const title, const char *const argument, const char *const message)
-	#define PRINTCONNECTIONERROR() /*--------*/ local void        printConnectionError(void)
-	#define PRINTTITLEDNAMEDERROR() /*-------*/ local void        printTitledNamedError(const char *const title, const char *const message, const char *const name)
-	#define PRINTERROREVENT() /*-------------*/ local void        printErrorEvent(const void *const event)
-	#define PRINTTITLEDVALUEDERROR() /*------*/ local void        printTitledValuedError(const char *const title, const char *const message, const uint value)
-	#define PRINTCONFIGERROR() /*------------*/ local void        printConfigError(const char *const type, const char *const message, const char finalStatementCharacter, const bool printLine, const bool printConfig, const bool printPointer, const bool printPattern, const char *const configPath, const uint statementLine, const char *const statementStart, const char *const statementWall, const Instruction *instructionStart, const Instruction *instructionCurrent, const char *const *currentScopeInstructionList, const StringNodeRoot *const currentScopeInstructionRoot, StringNodeRoot *const *const *currentScopeInstructionData)
-	#define OPENERRORSTREAM() /*-------------*/ local bool        openErrorStream(void)
-	#define CLOSEERRORSTREAM() /*------------*/ local void        closeErrorStream(void)
+	#define QUIT() /*------------------------*/ local void         quit(int signal)
+	#define GETSHAREDCHARACTER() /*----------*/ local int          getSharedCharacter(FILE *const configFile)
+	#define PRINTUNACCOUNTEDFORPOINTERS() /*-*/ local void         printUnaccountedForPointers(const Pointer *current, const Pointer *wall)
+	#define INITMEMORYMANAGER() /*-----------*/ local bool         initMemoryManager(void)
+	#define PUSHPOINTER() /*-----------------*/ local uint32      _pushPointer(void *const pointer, const char *const label, int (*const freeFunction)(void *))
+	#define POPPOINTER() /*------------------*/ local void         popPointer(const uint token)
+	#define UPDATEPOINTER() /*---------------*/ local void         updatePointer(const uint token, void *const pointer)
+	#define DELETEMEMORYMANAGER() /*---------*/ local void         deleteMemoryManager(void)
+	#define IFREE() /*-----------------------*/ local int          iFree(void *const pointer)
+	#define ISHMCTL() /*---------------------*/ local int          ishmctl(void *const pointer)
+	#define IXCBDISCONNECT() /*--------------*/ local int          iXCBDisconnect(void *const pointer)
+	#define SHMCONNECT() /*------------------*/ local void         shmConnect(void)
+	#define SHMDISCONNECT() /*---------------*/ local void         shmDisconnect(void)
+	#define IDENTIFYARGUMENT() /*------------*/ local uint8        identifyArgument(const char *p)
+	#define INSENSITIVESTRINGCOMPARE() /*----*/ local bool         insensitiveStringCompare(const char *s0, const char *s1)
+	#define SENSITIVESTRINGCOMPARE() /*------*/ local bool         sensitiveStringCompare(const char *s0, const char *s1)
+	#define PULSEAUDIOMAIN() /*--------------*/ local void *       pulseaudioMain(void *arg)
+	#define GETSTATE() /*--------------------*/ local void         getState(pa_context *const context, void *const userdata)
+	#define SUBSCRIBECALLBACK() /*-----------*/ local void         subscribeCallback(pa_context *const context, pa_subscription_event_type_t event, uint32 idx, void *const userdata)
+	#define GETSINKNAME() /*-----------------*/ local void         getSinkName(pa_context *const context, const pa_server_info *const serverInfo, void *const userdata)
+	#define FIRSTGETSINKINFOCALLBACK() /*----*/ local void         firstGetSinkInfoCallback(pa_context *const context, const pa_sink_info *const sinkInfo, const int eol, void *const userdata)
+	#define GETSINKINFO() /*-----------------*/ local void         getSinkInfo(pa_context *const context, const pa_sink_info *const sinkInfo, const int eol, void *const userdata)
+	#define BOOLSTATUS() /*------------------*/ local void         boolStatus(pa_context *const context, const int success, void *const userData)
+	#define TEMPORARYCALLBACK() /*-----------*/ local void         temporaryCallback(pa_context *const context, const pa_sink_info *const sinkInfo, const int eol, void *const userData)
+	#define SETSTRINGROOT() /*---------------*/ local void         setStringRoot(StringNodeRoot *root)
+	#define BULKINSERTSTRING() /*------------*/ local void         bulkInsertString(StringNodeRoot *root, const char *const *current)
+	#define INSERTSTRING() /*----------------*/ local bool         insertString(StringNodeRoot *root, const char *string)
+	#define GETSTRINGNODE() /*---------------*/ local StringNode * getStringNode(StringNodeRoot *const root, const char **const stringReturn)
+	#define DELETESTRINGROOT() /*------------*/ local void         deleteStringRoot(StringNodeRoot *root)
+	#define SETSHORTCUTROOT() /*-------------*/ local void         setShortcutRoot(ShortcutNodeRoot *root)
+	#define INSERTSHORTCUT() /*--------------*/ local bool         insertShortcut(ShortcutNodeRoot *root, const uint8 code, const uint16 modifier, const uint8 command, char *const string, const uint stringToken)
+	#define REMOVESHORTCUT() /*--------------*/ local bool         removeShortcut(ShortcutNodeRoot *root, const uint8 code, const uint16 modifier)
+	#define RESETSHORTCUTROOT() /*-----------*/ local void         resetShortcutRoot(ShortcutNodeRoot *root)
+	#define DELETESHORTCUTROOT() /*----------*/ local void         deleteShortcutRoot(ShortcutNodeRoot *root)
+	#define UNGRABSHORTCUTS() /*-------------*/ local void         ungrabShortcuts(void)
+	#define READCONFIG() /*------------------*/ local void         readConfig(const bool createConfigFile, const char *const configPath, int (*getConfigChar)(FILE *file))
+	#define MATCHNAMELIST() /*---------------*/ local uint8        matchNameList(StringNodeRoot *const root, const char *const statementWall, char **statementCurrentReturn, uint8 *const valueReturn)
+	#define MATCHINTEGER() /*----------------*/ local uint8        matchInteger(char **statementCurrent, const char *const statementWall, int *const returnValue)
+	#define MATCHSTRING() /*-----------------*/ local bool         matchString(char **statementCurrent, char **stringReturn, uint *stringToken)
+	#define MATCHEXECUTE() /*----------------*/ local bool         matchExecute(char **statementCurrent, char **executeReturn, uint *executeToken)
+	#define READIMAGE() /*-------------------*/ local uint8        readImage(const char *const path, const char **errorMessage, Image *image)
+	#define EXEC() /*------------------------*/ local void         exec(const char *const string)
+	#define GETPOINTERMONITOR() /*-----------*/ local Monitor *    getPointerMonitor(void)
+	#define PRINTERROR() /*------------------*/ local void         printError(const char *const message, ...)
+	#define PRINTTITLEDERROR() /*------------*/ local void         printTitledError(const char *const title, const char *const message)
+	#define PRINTTITLEDQUOTEDERROR() /*------*/ local void         printTitledQuotedError(const char *const title, const char *const argument, const char *const message)
+	#define PRINTCONNECTIONERROR() /*--------*/ local void         printConnectionError(void)
+	#define PRINTTITLEDNAMEDERROR() /*-------*/ local void         printTitledNamedError(const char *const title, const char *const message, const char *const name)
+	#define PRINTERROREVENT() /*-------------*/ local void         printErrorEvent(const void *const event)
+	#define PRINTTITLEDVALUEDERROR() /*------*/ local void         printTitledValuedError(const char *const title, const char *const message, const uint value)
+	#define PRINTCONFIGERROR() /*------------*/ local void         printConfigError(const char *const type, const char *const message, const char finalStatementCharacter, const bool printLine, const bool printConfig, const bool printPointer, const bool printPattern, const char *const configPath, const uint statementLine, const char *const statementStart, const char *const statementWall, const Instruction *instructionStart, const Instruction *instructionCurrent, const char *const *currentScopeInstructionList, const StringNodeRoot *const currentScopeInstructionRoot, StringNodeRoot *const *const *currentScopeInstructionData)
+	#define OPENERRORSTREAM() /*-------------*/ local bool         openErrorStream(void)
+	#define CLOSEERRORSTREAM() /*------------*/ local void         closeErrorStream(void)
 
 	#define xcb_wait_for_reply(a, b, c) /*---*/ (xcb_wait_for_reply(a, (b).sequence, c))
 	#define xcb_send_event(a, b, c, d, e) /*-*/ (xcb_send_event(a, b, c, d, (void *)(e)))
@@ -267,10 +280,10 @@ SOFTWARE. */
 	#define setJmpPoint(j) /*----------------*/ (jmpPoint = j##JmpPoint)
 
 	#if DEBUG
-		#define printEvent(void) /*-----------*/ (fprintf(DEFAULT_OUTPUT_STREAM, "%s%s: %sevent:%s %s\n", colorStart, programName, colorEvent, colorEnd, (*event).response_type == randrBaseEvent + XCB_RANDR_SCREEN_CHANGE_NOTIFY? "screen change" : *(eventName + (((*event).response_type &= ~128) > 35? ARRAY_SIZE(eventName) - 1 : (*event).response_type))))
-		#define printUnexpectedEvent(void) /*-*/ (fprintf(DEFAULT_OUTPUT_STREAM, "%s%s: %sunexpected event:%s %s, ignored\n", colorStart, programName, colorEvent, colorEnd, (*event).response_type == randrBaseEvent + XCB_RANDR_SCREEN_CHANGE_NOTIFY? "screen change" : *(eventName + (((*event).response_type &= ~128) > 35? ARRAY_SIZE(eventName) - 1 : (*event).response_type))))
+		#define printXEvent(void) /*----------*/ (fprintf(DEFAULT_OUTPUT_STREAM, "%s%s: %sevent:%s %s\n", colorStart, programName, colorEvent, colorEnd, (*event).response_type == randrBaseEvent + XCB_RANDR_SCREEN_CHANGE_NOTIFY? "screen change" : *(eventName + (((*event).response_type &= ~b(10000000)) > 35? ARRAY_SIZE(eventName) - 1 : (*event).response_type))))
+		#define printUnexpectedEvent(void) /*-*/ (fprintf(DEFAULT_OUTPUT_STREAM, "%s%s: %sunexpected event:%s %s, ignored\n", colorStart, programName, colorEvent, colorEnd, (*event).response_type == randrBaseEvent + XCB_RANDR_SCREEN_CHANGE_NOTIFY? "screen change" : *(eventName + (((*event).response_type &= ~b(10000000)) > 35? ARRAY_SIZE(eventName) - 1 : (*event).response_type))))
 	#else
-		#define printEvent(void) /*-----------*/ EMPTY_MACRO
+		#define printXEvent(void) /*----------*/ EMPTY_MACRO
 		#define printUnexpectedEvent(void) /*-*/ EMPTY_MACRO
 	#endif
 /*!}*/
@@ -743,33 +756,33 @@ SOFTWARE. */
 		, NULL
 	};
 
-	local const Instruction /*------------*/ helpInstruction[] = {EndInstruction};
-	local const Instruction /*------------*/ expandInstruction[] = {EndInstruction};
-	local const Instruction /*------------*/ contractInstruction[] = {EndInstruction};
-	local const Instruction /*------------*/ readConfigInstruction[] = {StringInstruction, EndInstruction};
-	local const Instruction /*------------*/ executeInstruction[] = {ExecuteInstruction, EndInstruction};
-	local const Instruction /*------------*/ offsetXInstruction[] = {NumberInstruction, EndInstruction};
-	local const Instruction /*------------*/ offsetYInstruction[] = {NumberInstruction, EndInstruction};
-	local const Instruction /*------------*/ centerXInstruction[] = {NumberInstruction, EndInstruction};
-	local const Instruction /*------------*/ centerYInstruction[] = {NumberInstruction, EndInstruction};
-	local const Instruction /*------------*/ widthInstruction[] = {NumberInstruction, EndInstruction};
-	local const Instruction /*------------*/ heightInstruction[] = {NumberInstruction, EndInstruction};
-	local const Instruction /*------------*/ whichMonitorInstruction[] = {NumberInstruction, EndInstruction};
-	local const Instruction /*------------*/ durationInstruction[] = {NumberInstruction, EndInstruction};
-	local const Instruction /*------------*/ useBlurInstruction[] = {NumberInstruction, EndInstruction};
-	local const Instruction /*------------*/ incrementPercentangeInstruction[] = {NumberInstruction, EndInstruction};
-	local const Instruction /*------------*/ decrementPercentangeInstruction[] = {NumberInstruction, EndInstruction};
-	local const Instruction /*------------*/ setImageInstruction[] = {NameInstruction, NumberInstruction, NumberInstruction, ImageInstruction, EndInstruction};
-	local const Instruction /*------------*/ setImageDirectionInstruction[] = {NameInstruction, NumberInstruction, EndInstruction};
-	local const Instruction /*------------*/ overlayImageInstruction[] = {NameInstruction, NumberInstruction, NumberInstruction, ImageInstruction, EndInstruction};
-	local const Instruction /*------------*/ grabKeycodeInstruction[] = {NameListInstruction, NumberInstruction, NameInstruction, EndInstruction};
-	local const Instruction /*------------*/ grabButtonInstruction[] = {NameListInstruction, NumberInstruction, NameInstruction, EndInstruction};
-	local const Instruction /*------------*/ ungrabKeycodeInstruction[] = {NameListInstruction, NumberInstruction, EndInstruction};
-	local const Instruction /*------------*/ ungrabButtonInstruction[] = {NameListInstruction, NumberInstruction, EndInstruction};
-	local const Instruction /*------------*/ stopInstruction[] = {EndInstruction};
+	local const Instruction /*------------*/ helpInstruction[] = {END_INSTRUCTION};
+	local const Instruction /*------------*/ expandInstruction[] = {END_INSTRUCTION};
+	local const Instruction /*------------*/ contractInstruction[] = {END_INSTRUCTION};
+	local const Instruction /*------------*/ readConfigInstruction[] = {STRING_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ executeInstruction[] = {EXECUTE_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ offsetXInstruction[] = {NUMBER_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ offsetYInstruction[] = {NUMBER_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ centerXInstruction[] = {NUMBER_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ centerYInstruction[] = {NUMBER_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ widthInstruction[] = {NUMBER_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ heightInstruction[] = {NUMBER_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ whichMonitorInstruction[] = {NUMBER_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ durationInstruction[] = {NUMBER_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ useBlurInstruction[] = {NUMBER_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ incrementPercentangeInstruction[] = {NUMBER_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ decrementPercentangeInstruction[] = {NUMBER_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ setImageInstruction[] = {NAME_INSTRUCTION, NUMBER_INSTRUCTION, NUMBER_INSTRUCTION, IMAGE_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ setImageDirectionInstruction[] = {NAME_INSTRUCTION, NUMBER_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ overlayImageInstruction[] = {NAME_INSTRUCTION, NUMBER_INSTRUCTION, NUMBER_INSTRUCTION, IMAGE_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ grabKeycodeInstruction[] = {NAME_LIST_INSTRUCTION, NUMBER_INSTRUCTION, NAME_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ grabButtonInstruction[] = {NAME_LIST_INSTRUCTION, NUMBER_INSTRUCTION, NAME_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ ungrabKeycodeInstruction[] = {NAME_LIST_INSTRUCTION, NUMBER_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ ungrabButtonInstruction[] = {NAME_LIST_INSTRUCTION, NUMBER_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ stopInstruction[] = {END_INSTRUCTION};
 
-	local const Instruction /*------------*/ executeGrabKeycodeSubInstruction[] = {NameListInstruction, NumberInstruction, NameInstruction, ExecuteInstruction, EndInstruction};
-	local const Instruction /*------------*/ executeGrabButtonSubInstruction[] = {NameListInstruction, NumberInstruction, NameInstruction, ExecuteInstruction, EndInstruction};
+	local const Instruction /*------------*/ executeGrabKeycodeSubInstruction[] = {NAME_LIST_INSTRUCTION, NUMBER_INSTRUCTION, NAME_INSTRUCTION, EXECUTE_INSTRUCTION, END_INSTRUCTION};
+	local const Instruction /*------------*/ executeGrabButtonSubInstruction[] = {NAME_LIST_INSTRUCTION, NUMBER_INSTRUCTION, NAME_INSTRUCTION, EXECUTE_INSTRUCTION, END_INSTRUCTION};
 
 	local StringNodeRoot *const *const /*-*/ helpInstructionData = NULL;
 	local StringNodeRoot *const *const /*-*/ expandInstructionData = NULL;
@@ -850,29 +863,19 @@ SOFTWARE. */
 /*!functions:{*/
 	QUIT();
 	GETSHAREDCHARACTER();
-	PRINTUNACCOUNTEDFORPOINTERS();
 	INITMEMORYMANAGER();
 	PUSHPOINTER();
 	POPPOINTER();
 	UPDATEPOINTER();
 	DELETEMEMORYMANAGER();
-
-
-
 	IFREE();
 	ISHMCTL();
 	IXCBDISCONNECT();
-
-
-
 	SHMCONNECT();
 	SHMDISCONNECT();
 	IDENTIFYARGUMENT();
 	INSENSITIVESTRINGCOMPARE();
 	SENSITIVESTRINGCOMPARE();
-
-
-
 	PULSEAUDIOMAIN();
 	GETSTATE();
 	SUBSCRIBECALLBACK();
@@ -881,9 +884,6 @@ SOFTWARE. */
 	GETSINKINFO();
 	BOOLSTATUS();
 	TEMPORARYCALLBACK();
-
-
-
 	SETSTRINGROOT();
 	BULKINSERTSTRING();
 	INSERTSTRING();
@@ -903,6 +903,7 @@ SOFTWARE. */
 	READIMAGE();
 	EXEC();
 	GETPOINTERMONITOR();
+	PRINTUNACCOUNTEDFORPOINTERS();
 	PRINTERROR();
 	PRINTTITLEDERROR();
 	PRINTTITLEDQUOTEDERROR();
@@ -1520,6 +1521,8 @@ int main(int argumentAmount, const char *const *argument){
 		errorStream /*---------------*/ = DEFAULT_ERROR_STREAM;
 		errorStreamToken /*----------*/ = 0;
 		quitting /*------------------*/ = false;
+		pulseaudioThread /*----------*/ = 0;
+		mainloop /*------------------*/ = 0;
 		connection /*----------------*/ = NULL;
 		connectionToken /*-----------*/ = 0;
 		monitorData /*---------------*/ = NULL;
@@ -1533,6 +1536,10 @@ int main(int argumentAmount, const char *const *argument){
 		eventToken /*----------------*/ = 0;
 		exposeEvent.response_type /*-*/ = XCB_EXPOSE;
 		exposeEvent.count /*---------*/ = 0;
+		if(pthread_mutex_init(&pushPointerLock, NULL)){
+			printTitledError("pthread error", "could not init popPointer() mutex");
+			ret 0;
+		}
 		initMemoryManager();
 		shmConnect();
 		setStringRoot(&globalScopesInstructionRoot);
@@ -1550,7 +1557,7 @@ int main(int argumentAmount, const char *const *argument){
 	getProgramArguments:{
 		if(argumentAmount == 1){
 			printError("%s%s: %susage:%s %s [argument] [value] or %s [argument] [--help]\n\t[-h], [--help]  \tdisplay this message\n\t[-c], [--config]\tpath to config file, mandatory\n\t[-e], [--error] \tpath to error file, optional\n\t[-s], [--server]\tX server connection, optional\n", colorStart, programName, colorError, colorEnd, programName, programName);
-			ret 1;
+			jmp mainEmergencyExit;
 		}
 		dec argumentAmount;
 		jmp checkErrorRedirection;
@@ -1567,31 +1574,31 @@ int main(int argumentAmount, const char *const *argument){
 	}
 	matchArgumentsLoop:{
 		switch identifyArgument(*(inc argument)) over
-			to HelpArgument: /*---*/ jmp helpArgument;
-			to ConfigArgument: /*-*/ jmp configArgument;
-			to ErrorArgument: /*--*/ jmp errorArgument;
-			to ServerArgument: /*-*/ jmp serverArgument;
-			off: /*---------------*/ jmp notAnArgument;
+			to HELP_ARGUMENT: /*---*/ jmp helpArgument;
+			to CONFIG_ARGUMENT: /*-*/ jmp configArgument;
+			to ERROR_ARGUMENT: /*--*/ jmp errorArgument;
+			to SERVER_ARGUMENT: /*-*/ jmp serverArgument;
+			off: /*----------------*/ jmp notAnArgument;
 		end
 	}
 	helpArgument:{
 		fprintf(DEFAULT_OUTPUT_STREAM, "%s: usage: %s [argument] [value] or %s [argument] [--help]\n\t[-h], [--help]  \tdisplay this message\n\t[-c], [--config]\tpath to config file, mandatory\n\t[-e], [--error] \tpath to error file, optional\n\t[-s], [--server]\tX server connection, optional\n", programName, programName, programName);
-		ret 0;
+		jmp mainEmergencyExit;
 	}
 	configArgument:{
 		if(configPath){
 			printTitledError("argument error", "the config argument has already been specified");
-			ret 0;
+			jmp mainEmergencyExit;
 		}
 		if(!dec argumentAmount){
 			printTitledError("argument error", "no config value specified");
-			ret 0;
+			jmp mainEmergencyExit;
 		}
 		configPath = *(inc argument);
 		switch identifyArgument(configPath) over
-			to UnrecognizedArgument: /*-*/ jmp openConfigFile;
-			to HelpArgument: /*---------*/ jmp displayConfigUsage;
-			off: /*---------------------*/ jmp displayNoConfigValue;
+			to UNRECOGNIZED_ARGUMENT: /*-*/ jmp openConfigFile;
+			to HELP_ARGUMENT: /*---------*/ jmp displayConfigUsage;
+			off: /*----------------------*/ jmp displayNoConfigValue;
 		end
 	}
 	openConfigFile:{
@@ -1602,7 +1609,7 @@ int main(int argumentAmount, const char *const *argument){
 			closedir(dir);
 			popPointer(dirToken);
 			printTitledQuotedError("argument error", *argument, "config value is directory");
-			ret 0;
+			jmp mainEmergencyExit;
 		}
 		if((file = fopen(configPath, "r"))){
 			const uint fileToken = pushPointer(file, "config file argument", fclose);
@@ -1618,32 +1625,32 @@ int main(int argumentAmount, const char *const *argument){
 			jmp matchArgumentLoopControl;
 		}
 		printTitledError("argument error", "could not read or create config file");
-		ret 0;
+		jmp mainEmergencyExit;
 	}
 	displayConfigUsage:{
 		fprintf(DEFAULT_OUTPUT_STREAM, "%s: usage: %s --config \"/path/to/file\"\n\tif the specified file doesn't exist it will be created\n\tand it will contain the hardcoded default configuration\n", programName, programName);
-		ret 0;
+		jmp mainEmergencyExit;
 	}
 	displayNoConfigValue:{
 		printTitledError("argument error", "no config value specified");
-		ret 0;
+		jmp mainEmergencyExit;
 	}
 	errorArgument:{
 		if(errorPath){
 			printTitledError("argument error", "the error argument has already been specified");
-			ret 0;
+			jmp mainEmergencyExit;
 		}
 		if(!dec argumentAmount){
 			printTitledError("argument error", "no error value specified");
-			ret 0;
+			jmp mainEmergencyExit;
 		}
 		errorPath = *(inc argument);
 		switch identifyArgument(errorPath) over
-			to UnrecognizedArgument: /*-*/ jmp openErrorFile;
-			to HelpArgument: /*---------*/ jmp displayErrorUsage;
-			to StdoutArgument: /*-------*/ jmp setErrorStreamStdout;
-			to StderrArgument: /*-------*/ jmp setErrorStreamStderr;
-			off: /*---------------------*/ jmp displayNoErrorValue;
+			to UNRECOGNIZED_ARGUMENT: /*-*/ jmp openErrorFile;
+			to HELP_ARGUMENT: /*---------*/ jmp displayErrorUsage;
+			to STDOUT_ARGUMENT: /*-------*/ jmp setErrorStreamStdout;
+			to STDERR_ARGUMENT: /*-------*/ jmp setErrorStreamStderr;
+			off: /*----------------------*/ jmp displayNoErrorValue;
 		end
 	}
 	openErrorFile:{
@@ -1654,7 +1661,7 @@ int main(int argumentAmount, const char *const *argument){
 			closedir(dir);
 			popPointer(dirToken);
 			printTitledQuotedError("argument error", *argument, "error value is directory");
-			ret 0;
+			jmp mainEmergencyExit;
 		}
 		if((file = fopen(errorPath, "r"))){
 			const uint fileToken = pushPointer(file, "error file argument", fclose);
@@ -1682,11 +1689,11 @@ int main(int argumentAmount, const char *const *argument){
 			jmp matchArgumentLoopControl;
 		}
 		printTitledError("argument error", "could not create error file");
-		ret 0;
+		jmp mainEmergencyExit;
 	}
 	displayErrorUsage:{
 		fprintf(DEFAULT_OUTPUT_STREAM, "%s: usage: %s --error \"/path/to/file\"\n\tif the specified file doesn't exist it will be created\n", programName, programName);
-		ret 0;
+		jmp mainEmergencyExit;
 	}
 	setErrorStreamStdout:{
 		errorStream = stdout;
@@ -1698,35 +1705,35 @@ int main(int argumentAmount, const char *const *argument){
 	}
 	displayNoErrorValue:{
 		printTitledError("argument error", "no error value specified");
-		ret 0;
+		jmp mainEmergencyExit;
 	}
 	serverArgument:{
 		if(connectionName){
 			printTitledError("argument error", "the server argument has already been specified");
-			ret 0;
+			jmp mainEmergencyExit;
 		}
 		if(!dec argumentAmount){
 			printTitledError("argument error", "no server value specified");
-			ret 0;
+			jmp mainEmergencyExit;
 		}
 		connectionName = *(inc argument);
 		switch identifyArgument(connectionName) over
-			to UnrecognizedArgument: /*-*/ jmp matchArgumentLoopControl;
-			to HelpArgument: /*---------*/ jmp displayServerUsage;
-			off: /*---------------------*/ jmp displayNoServerValue;
+			to UNRECOGNIZED_ARGUMENT: /*-*/ jmp matchArgumentLoopControl;
+			to HELP_ARGUMENT: /*---------*/ jmp displayServerUsage;
+			off: /*----------------------*/ jmp displayNoServerValue;
 		end
 	}
 	displayServerUsage:{
 		fprintf(DEFAULT_OUTPUT_STREAM, "%s: usage: %s --server \"name\"\n\tthe name of the server, if running, should be something like \":0\"\n\tit can be checked with the $DISPLAY variable on a running server (no tty)\n", programName, programName);
-		ret 0;
+		jmp mainEmergencyExit;
 	}
 	displayNoServerValue:{
 		printTitledError("argument error", "no server value specified");
-		ret 0;
+		jmp mainEmergencyExit;
 	}
 	notAnArgument:{
 		printTitledQuotedError("argument error", *argument, "is not recognized as program argument, check help? [-h]");
-		ret 0;
+		jmp mainEmergencyExit;
 	}
 	matchArgumentLoopControl:{
 		if(dec argumentAmount){
@@ -1737,20 +1744,16 @@ int main(int argumentAmount, const char *const *argument){
 	argumentsFinalCheck:{
 		if(!configPath){
 			printTitledError("argument error", "no config argument specified");
-			ret 0;
+			jmp mainEmergencyExit;
 		}
 		if(errorPath and sensitiveStringCompare(errorPath, configPath)){
 			mustOpenErrorStream = false;
 			printTitledError("argument error", "config and error files are the same");
-			ret 0;
+			jmp mainEmergencyExit;
 		}
 		jmp startConcurrentThreads;
 	}
 	startConcurrentThreads:{
-		if(pthread_mutex_init(&pushPointerLock, NULL)){
-			printTitledError("pthread error", "could not init popPointer() mutex");
-			ret 0;
-		}
 		pulseaudioEvent = NONE_PULSEAUDIO_EVENT;
 		if(pthread_create(&pulseaudioThread, NULL, pulseaudioMain, NULL)){
 			printTitledError("pthread error", "could not create pulseaudio thread");
@@ -2088,7 +2091,7 @@ int main(int argumentAmount, const char *const *argument){
 				(*monitorCurrent).window = xcb_generate_id(connection);
 				(*monitorCurrent).gc = xcb_generate_id(connection);
 				(*monitorCurrent).windowIsMapped = false;
-				xcb_create_window(connection, depth, (*monitorCurrent).window, (*screen).root, 0, 0, 1, 1, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, visual, XCB_CW_BACK_PIXEL | XCB_CW_BORDER_PIXEL | XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK | XCB_CW_COLORMAP, &valueList.backgroundColor);
+				xcb_create_window(connection, depth, (*monitorCurrent).window, (*screen).root, 0, 0, 1, 1, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, visual, XCB_CW_BACK_PIXEL | XCB_CW_BORDER_PIXEL | XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK | XCB_CW_COLORMAP, &valueList);
 				xcb_create_gc(connection, (*monitorCurrent).gc, (*monitorCurrent).window, XCB_NONE, NULL);
 				xcb_randr_monitor_info_next(&iterator);
 				inc monitorCurrent;
@@ -2234,8 +2237,8 @@ int main(int argumentAmount, const char *const *argument){
 	}
 	switchEvent:{
 		#define XCB_ONE /*-*/ (1)
-		printEvent();
-		switch (*event).response_type & ~128 over
+		printXEvent();
+		switch (*event).response_type & ~b(10000000) over
 			to XCB_NONE: /*--------------*/ jmp errorEvent;
 			to XCB_ONE: /*---------------*/ jmp impossibleEvent;
 			to XCB_KEY_PRESS: /*---------*/ jmp keyPressEvent;
@@ -2281,7 +2284,7 @@ int main(int argumentAmount, const char *const *argument){
 		jmp eventLoop;
 	}
 	impossibleEvent:{
-		printTitledValuedError("event error", "impossible event with type", (*event).response_type & ~128);
+		printTitledValuedError("X event error", "impossible event with type", (*event).response_type & ~b(10000000));
 		jmp eventLoop;
 	}
 	keyPressEvent:{
@@ -2470,7 +2473,7 @@ int main(int argumentAmount, const char *const *argument){
 		#undef  event
 	}
 	extensionEvent:{
-		const uint8 eventType = (*event).response_type & ~128;
+		const uint8 eventType = (*event).response_type & ~b(10000000);
 		if(eventType == randrBaseEvent + XCB_RANDR_SCREEN_CHANGE_NOTIFY){
 			jmp randrEvent;
 		}
@@ -2498,7 +2501,7 @@ int main(int argumentAmount, const char *const *argument){
 		jmp eventLoop;
 	}
 	unhandledEvent:{
-		printTitledValuedError("event error", "unhandled event with type", (*event).response_type & ~128);
+		printTitledValuedError("X event error", "unhandled event with type", (*event).response_type & ~b(10000000));
 		jmp eventLoop;
 	}
 	unexpectedEvent:{
@@ -2506,14 +2509,14 @@ int main(int argumentAmount, const char *const *argument){
 		jmp eventLoop;
 	}
 	switchCommand: switch command over
-		to NoneCommand: /*-------*/ jmp eventLoopCheckShortcuts;
-		to ExecuteCommand: /*----*/ jmp executeCommand;
-		to VolumeUpCommand: /*---*/ jmp volumeUpCommand;
-		to VolumeDownCommand: /*-*/ jmp volumeDownCommand;
-		to MuteCommand: /*-------*/ jmp muteCommand;
-		to RestartCommand: /*----*/ jmp restartCommand;
-		to ExitCommand: /*-------*/ jmp exitCommand;
-		off: /*------------------*/ jmp unrecognizedCommand;
+		to NONE_COMMAND: /*--------*/ jmp eventLoopCheckShortcuts;
+		to EXECUTE_COMMAND: /*-----*/ jmp executeCommand;
+		to VOLUME_UP_COMMAND: /*---*/ jmp volumeUpCommand;
+		to VOLUME_DOWN_COMMAND: /*-*/ jmp volumeDownCommand;
+		to MUTE_COMMAND: /*--------*/ jmp muteCommand;
+		to RESTART_COMMAND: /*-----*/ jmp restartCommand;
+		to EXIT_COMMAND: /*--------*/ jmp exitCommand;
+		off: /*--------------------*/ jmp unrecognizedCommand;
 	end
 	executeCommand:{
 		exec(executeString);
@@ -2554,19 +2557,12 @@ int main(int argumentAmount, const char *const *argument){
 		jmp eventLoopCheckShortcuts;
 	}
 	mainEmergencyExit:{
-
-
-
-		pa_threaded_mainloop_stop(mainloop);
-		if(pthread_join(pulseaudioThread, NULL)){
+		if(mainloop){
+			pa_threaded_mainloop_stop(mainloop);
+		}
+		if(pulseaudioThread and pthread_join(pulseaudioThread, NULL)){
 			printTitledError("pthread error", "could not join pulseaudio thread");
 		}
-		if(pthread_mutex_destroy(&pushPointerLock)){
-			printTitledError("pthread error", "could not destroy popPointer() mutex");
-		}
-
-
-
 		free(event);
 		popPointer(eventToken);
 		free(monitorData);
@@ -2583,16 +2579,15 @@ int main(int argumentAmount, const char *const *argument){
 		deleteStringRoot(&scope1ScopeInstructionRoot);
 		deleteStringRoot(&globalInstructionRoot);
 		deleteStringRoot(&globalScopesInstructionRoot);
-		shmDisconnect();
-		closeErrorStream();
 		if(dynamicDataSegment.allocated > 1){
 			printError("%s%s: %s%s:%s %s", colorStart, programName, colorError, "warning", colorEnd, "program exited with unaccounted for data pointers, namely: ");
-			{
-				const Pointer *start = dynamicDataSegment.data;
-				printUnaccountedForPointers(start + 1, start + dynamicDataSegment.allocated);
-			}
+			printUnaccountedForPointers(dynamicDataSegment.data + 1, dynamicDataSegment.data + dynamicDataSegment.allocated);
 		}
 		deleteMemoryManager();
+		if(pthread_mutex_destroy(&pushPointerLock)){
+			printTitledError("pthread error", "could not destroy popPointer() mutex");
+		}
+		closeErrorStream();
 		ret 0;
 	}
 }
@@ -2609,6 +2604,10 @@ QUIT(){
 			}
 			printTitledNamedError("quitting error", "could not free", labelExamined);
 			deleteMemoryManager();
+			if(pthread_mutex_destroy(&pushPointerLock)){
+				printTitledError("pthread error", "could not destroy popPointer() mutex");
+			}
+			closeErrorStream();
 			exit(EXIT_SUCCESS);
 		}
 		if(processingSignal and signal != SIGINT){
@@ -2656,6 +2655,10 @@ QUIT(){
 		printTitledError("signal received", message);
 		if(dynamicDataSegment.allocated <= 1){
 			deleteMemoryManager();
+			if(pthread_mutex_destroy(&pushPointerLock)){
+				printTitledError("pthread error", "could not destroy popPointer() mutex");
+			}
+			closeErrorStream();
 			exit(EXIT_SUCCESS);
 		}
 		start = dynamicDataSegment.data;
@@ -2684,6 +2687,10 @@ QUIT(){
 			jmp freePointedVariablesLoop;
 		}
 		deleteMemoryManager();
+		if(pthread_mutex_destroy(&pushPointerLock)){
+			printTitledError("pthread error", "could not destroy popPointer() mutex");
+		}
+		closeErrorStream();
 		exit(EXIT_SUCCESS);
 	}
 }
@@ -2730,10 +2737,10 @@ PUSHPOINTER(){
 		printTitledError("pthread error", "could not lock popPointer() mutex");
 		ret 0;
 	}
-	token = s.allocated;
 	if(!pointer){
 		ret 0;
 	}
+	token = s.allocated;
 	if(token == s.size){
 		void *temp;
 		s.size += DYNAMIC_DATA_SEGMENT_BLOCK_SIZE;
@@ -2791,14 +2798,14 @@ IXCBDISCONNECT(){
 	#undef  DYNAMIC_DATA_SEGMENT_BLOCK_SIZE
 }
 SHMCONNECT(){
-	#define SHM_KEY /*-----*/ (((s.st_dev << 20) & 0xfff00000) | ((s.st_ino << 8) & 0x000fff00) | 0x00000045)
-	#define SHARED_SIZE /*-*/ (65536)
-	#define SHM_NONE /*----*/ (0)
-	#define STAT_FAIL /*---*/ (-1)
-	#define SHMGET_FAIL /*-*/ (-1)
-	#define SHMAT_FAIL /*--*/ (-1)
-	#define SHMCTL_FAIL /*-*/ (-1)
-	#define SHMDT_FAIL /*--*/ (-1)
+	#define SHM_KEY /*--------*/ (((s.st_dev << 20) & 0xfff00000) | ((s.st_ino << 8) & 0x000fff00) | 0x00000045)
+	#define SHARED_SIZE /*----*/ (65536)
+	#define SHM_NONE /*-------*/ (0)
+	#define STAT_FAILURE /*---*/ (-1)
+	#define SHMGET_FAILURE /*-*/ (-1)
+	#define SHMAT_FAILURE /*--*/ (-1)
+	#define SHMCTL_FAILURE /*-*/ (-1)
+	#define SHMDT_FAILURE /*--*/ (-1)
 	def struct stat /*-*/ Stat;
 	FILE *file;
 	Stat s;
@@ -2818,14 +2825,14 @@ SHMCONNECT(){
 		jmp getKeyFileStat;
 	}
 	getKeyFileStat:{
-		if(stat(STAT_PATH, &s) == STAT_FAIL){
+		if(stat(STAT_PATH, &s) == STAT_FAILURE){
 			printError("%s: could not generate shared memory key\n", programName);
 			ret;
 		}
 		jmp generateSharedMemoryID;
 	}
 	generateSharedMemoryID:{
-		if((shmid = shmget(SHM_KEY, SHARED_SIZE, 0600 | IPC_CREAT)) == SHMGET_FAIL){
+		if((shmid = shmget(SHM_KEY, SHARED_SIZE, 0600 | IPC_CREAT)) == SHMGET_FAILURE){
 			printError("%s: could not create shared memory segment\n", programName);
 			ret;
 		}
@@ -2833,7 +2840,7 @@ SHMCONNECT(){
 		jmp attachToSharedMemory;
 	}
 	attachToSharedMemory:{
-		if((sharedStart = shmat(shmid, NULL, SHM_NONE)) == (void *)SHMAT_FAIL){
+		if((sharedStart = shmat(shmid, NULL, SHM_NONE)) == (void *)SHMAT_FAILURE){
 			printError("%s: could not attach to shared memory\n", programName);
 			ret;
 		}
@@ -2845,7 +2852,7 @@ SHMCONNECT(){
 SHMDISCONNECT(){
 	jmp markForDeletion;
 	markForDeletion:{
-		if(shmid != SHMGET_FAIL and shmctl(shmid, IPC_RMID, NULL) == SHMCTL_FAIL){
+		if(shmid != SHMGET_FAILURE and shmctl(shmid, IPC_RMID, NULL) == SHMCTL_FAILURE){
 			printError("%s: could not mark shared memory for deletion\n", programName);
 			ret;
 		}
@@ -2853,18 +2860,18 @@ SHMDISCONNECT(){
 		jmp detach;
 	}
 	detach:{
-		if(sharedStart != (void *)SHMAT_FAIL and shmdt(sharedStart) == SHMDT_FAIL){
+		if(sharedStart != (void *)SHMAT_FAILURE and shmdt(sharedStart) == SHMDT_FAILURE){
 			printError("%s: could not detach from shared memory\n", programName);
 			ret;
 		}
 		popPointer(sharedStartToken);
 		ret;
 	}
-	#undef  SHMDT_FAIL
-	#undef  SHMCTL_FAIL
-	#undef  SHMAT_FAIL
-	#undef  SHMGET_FAIL
-	#undef  STAT_FAIL
+	#undef  SHMDT_FAILURE
+	#undef  SHMCTL_FAILURE
+	#undef  SHMAT_FAILURE
+	#undef  SHMGET_FAILURE
+	#undef  STAT_FAILURE
 	#undef  SHM_NONE
 	#undef  SHARED_SIZE
 	#undef  SHM_KEY
@@ -2876,23 +2883,23 @@ IDENTIFYARGUMENT(){
 	inc p;
 	jmp findLongArgument;
 	findValueArgument:{
-		if(insensitiveStringCompare("stdout", p)) /*-*/ ret StdoutArgument;
-		if(insensitiveStringCompare("stderr", p)) /*-*/ ret StderrArgument;
-		/*-------------------------------------------*/ ret UnrecognizedArgument;
+		if(insensitiveStringCompare("stdout", p)) /*-*/ ret STDOUT_ARGUMENT;
+		if(insensitiveStringCompare("stderr", p)) /*-*/ ret STDERR_ARGUMENT;
+		/*-------------------------------------------*/ ret UNRECOGNIZED_ARGUMENT;
 	}
 	findShortArgument:{
-		if(insensitiveStringCompare("h", p)) /*------*/ ret HelpArgument;
-		if(insensitiveStringCompare("c", p)) /*------*/ ret ConfigArgument;
-		if(insensitiveStringCompare("e", p)) /*------*/ ret ErrorArgument;
-		if(insensitiveStringCompare("s", p)) /*------*/ ret ServerArgument;
-		/*-------------------------------------------*/ ret UnrecognizedArgument;
+		if(insensitiveStringCompare("h", p)) /*------*/ ret HELP_ARGUMENT;
+		if(insensitiveStringCompare("c", p)) /*------*/ ret CONFIG_ARGUMENT;
+		if(insensitiveStringCompare("e", p)) /*------*/ ret ERROR_ARGUMENT;
+		if(insensitiveStringCompare("s", p)) /*------*/ ret SERVER_ARGUMENT;
+		/*-------------------------------------------*/ ret UNRECOGNIZED_ARGUMENT;
 	}
 	findLongArgument:{
-		if(insensitiveStringCompare("help", p)) /*---*/ ret HelpArgument;
-		if(insensitiveStringCompare("config", p)) /*-*/ ret ConfigArgument;
-		if(insensitiveStringCompare("error", p)) /*--*/ ret ErrorArgument;
-		if(insensitiveStringCompare("server", p)) /*-*/ ret ServerArgument;
-		/*-------------------------------------------*/ ret UnrecognizedArgument;
+		if(insensitiveStringCompare("help", p)) /*---*/ ret HELP_ARGUMENT;
+		if(insensitiveStringCompare("config", p)) /*-*/ ret CONFIG_ARGUMENT;
+		if(insensitiveStringCompare("error", p)) /*--*/ ret ERROR_ARGUMENT;
+		if(insensitiveStringCompare("server", p)) /*-*/ ret SERVER_ARGUMENT;
+		/*-------------------------------------------*/ ret UNRECOGNIZED_ARGUMENT;
 	}
 }
 INSENSITIVESTRINGCOMPARE(){
@@ -3589,7 +3596,7 @@ GETSTRINGNODE(){
 			char ch = *string;
 			ch += (ch >= 'A' and ch <= 'Z') * 32 - (ch == '_') * 50;
 			if(!ch and (*c).letter & 128){
-				(*root).returnedCounter = ((*c).letter & ~128) - 1;
+				(*root).returnedCounter = ((*c).letter & ~b(10000000)) - 1;
 				*stringReturn = string;
 				ret NULL;
 			}
@@ -3710,7 +3717,7 @@ REMOVESHORTCUT(){
 				popPointer((*node).stringToken);
 				(*node).string = NULL;
 				(*node).stringToken = 0;
-				(*node).command = NoneCommand;
+				(*node).command = NONE_COMMAND;
 				hasRemovedShortcut = true;
 			}
 			if((*node).nextOffset){
@@ -3765,22 +3772,24 @@ DELETESHORTCUTROOT(){
 	#undef  MODIFIER_DATA_BLOCK_SIZE
 }
 UNGRABSHORTCUTS(){
-	xcb_ungrab_key(connection, (*screen).root, XCB_GRAB_ANY, XCB_MOD_MASK_ANY);
-	xcb_ungrab_button(connection, (*screen).root, XCB_BUTTON_INDEX_ANY, XCB_MOD_MASK_ANY);
-/*!
-	if(windowAllocated){
-		xcb_window_t *windowStart;
-		xcb_window_t *windowCurrent;
-		xcb_window_t *const windowWall = windowStart + windowAllocated;
-		ungrabWindowLoop:{
-			xcb_ungrab_key(connection, *windowCurrent, XCB_GRAB_ANY, XCB_MOD_MASK_ANY);
-			xcb_ungrab_button(connection, *windowCurrent, XCB_BUTTON_INDEX_ANY, XCB_MOD_MASK_ANY);
-			if(inc windowCurrent < windowWall){
-				jmp ungrabWindowLoop;
+	if(connection){
+		xcb_ungrab_key(connection, (*screen).root, XCB_GRAB_ANY, XCB_MOD_MASK_ANY);
+		xcb_ungrab_button(connection, (*screen).root, XCB_BUTTON_INDEX_ANY, XCB_MOD_MASK_ANY);
+	/*!
+		if(windowAllocated){
+			xcb_window_t *windowStart;
+			xcb_window_t *windowCurrent;
+			xcb_window_t *const windowWall = windowStart + windowAllocated;
+			ungrabWindowLoop:{
+				xcb_ungrab_key(connection, *windowCurrent, XCB_GRAB_ANY, XCB_MOD_MASK_ANY);
+				xcb_ungrab_button(connection, *windowCurrent, XCB_BUTTON_INDEX_ANY, XCB_MOD_MASK_ANY);
+				if(inc windowCurrent < windowWall){
+					jmp ungrabWindowLoop;
+				}
 			}
 		}
+	*/
 	}
-*/
 	ret;
 }
 READCONFIG(){
@@ -4263,10 +4272,10 @@ READCONFIG(){
 		}
 		instructionStart = *(currentScopeInstruction + (*currentScopeInstructionRoot).returnedCounter);
 		instructionCurrent = instructionStart;
-		if(*instructionCurrent == NoneInstruction){
+		if(*instructionCurrent == NONE_INSTRUCTION){
 			jmp unimplementedInstruction;
 		}
-		if(statementCurrent >= statementWall and *instructionCurrent != EndInstruction){
+		if(statementCurrent >= statementWall and *instructionCurrent != END_INSTRUCTION){
 			printConfigError("config error", "missing instruction body", ';', true, true, true, true, configPath, statementLine, statementStart, statementWall, instructionStart, instructionCurrent, currentScopeInstructionList, currentScopeInstructionRoot, currentScopeInstructionData);
 			jmp getStatementStart;
 		}
@@ -4275,14 +4284,14 @@ READCONFIG(){
 		jmp switchInstructionLoop;
 	}
 	switchInstructionLoop: switch *instructionCurrent over
-		to NoneInstruction: /*-----*/ jmp unimplementedInstruction;
-		to NameInstruction: /*-----*/ jmp matchName;
-		to NameListInstruction: /*-*/ jmp matchNameList;
-		to NumberInstruction: /*---*/ jmp matchInteger;
-		to StringInstruction: /*---*/ jmp matchString;
-		to ExecuteInstruction: /*--*/ jmp matchExecuteString;
-		to ImageInstruction: /*----*/ jmp matchImageString;
-		off: /*--------------------*/ jmp endOfInstruction;
+		to NONE_INSTRUCTION: /*------*/ jmp unimplementedInstruction;
+		to NAME_INSTRUCTION: /*------*/ jmp matchName;
+		to NAME_LIST_INSTRUCTION: /*-*/ jmp matchNameList;
+		to NUMBER_INSTRUCTION: /*----*/ jmp matchInteger;
+		to STRING_INSTRUCTION: /*----*/ jmp matchString;
+		to EXECUTE_INSTRUCTION: /*---*/ jmp matchExecuteString;
+		to IMAGE_INSTRUCTION: /*-----*/ jmp matchImageString;
+		off: /*----------------------*/ jmp endOfInstruction;
 	end
 	unimplementedInstruction:{
 		printConfigError("implementation error", "using unimplemented instruction", ';', true, true, true, false, configPath, statementLine, statementStart, statementWall, NULL, NULL, currentScopeInstructionList, currentScopeInstructionRoot, currentScopeInstructionData);
@@ -4317,9 +4326,9 @@ READCONFIG(){
 		}
 		nameListInstruction = instructionCurrent;
 		switch matchNameList(*instructionCurrentData, statementWall, &statementCurrent, &nameListReturn) over
-			to InvalidNameNameList: /*--*/ jmp invalidNameNameList;
-			to PrematureEndNameList: /*-*/ jmp prematureEndNameList;
-			off: /*---------------------*/ jmp advanceDataInstruction;
+			to INVALID_NAME_NAME_LIST: /*--*/ jmp invalidNameNameList;
+			to PREMATURE_END_NAME_LIST: /*-*/ jmp prematureEndNameList;
+			off: /*------------------------*/ jmp advanceDataInstruction;
 		end
 	}
 	invalidNameNameList:{
@@ -4343,10 +4352,10 @@ READCONFIG(){
 			integerPointer = &integer1Return;
 		}
 		switch matchInteger(&statementCurrent, statementWall, integerPointer) over
-			to NonNumber: /*-----------*/ jmp printNonNumberError;
-			to OverflownNumber: /*-----*/ jmp printOverflownNumberError;
-			to DividedByZeroNumber: /*-*/ jmp printDividedByZeroNumberError;
-			off: /*--------------------*/ jmp advanceInstruction;
+			to NON_NUMBER: /*-------------*/ jmp printNonNumberError;
+			to OVERFLOWN_NUMBER: /*-------*/ jmp printOverflownNumberError;
+			to DIVIDED_BY_ZERO_NUMBER: /*-*/ jmp printDividedByZeroNumberError;
+			off: /*-----------------------*/ jmp advanceInstruction;
 		end
 	}
 	printNonNumberError:{
@@ -4395,18 +4404,18 @@ READCONFIG(){
 			jmp getStatementStart;
 		}
 		switch readImage(string, &imageErrorMessage, &imageReturn) over
-			to CannotOpenReadConfig: /*--------*/ jmp printCannotOpenReadConfig;
-			to CannotReadReadConfig: /*--------*/ jmp printCannotReadReadConfig;
-			to UnsupportedFormatReadConfig: /*-*/ jmp printUnsupportedFormatReadConfig;
-			to BadHeaderReadConfig: /*---------*/ jmp printBadHeaderReadConfig;
-			to BadDepthReadConfig: /*----------*/ jmp printBadDepthReadConfig;
-			to BadCompressionReadConfig: /*----*/ jmp printBadCompressionReadConfig;
-			to UnsupportedHeightReadConfig: /*-*/ jmp printUnsupportedHeightReadConfig;
-			to BadSizeReadConfig: /*-----------*/ jmp printBadSizeReadConfig;
-			to FailedReadConfig: /*------------*/ jmp printFailedReadConfig;
-			to BadPixelsReadConfig: /*---------*/ jmp printBadPixelsReadConfig;
-			to BadImageReadConfig: /*----------*/ jmp printBadImageReadConfig;
-			off: /*----------------------------*/ brk;
+			to CANNOT_OPEN_READ_CONFIG: /*--------*/ jmp printCannotOpenReadConfig;
+			to CANNOT_READ_READ_CONFIG: /*--------*/ jmp printCannotReadReadConfig;
+			to UNSUPPORTED_FORMAT_READ_CONFIG: /*-*/ jmp printUnsupportedFormatReadConfig;
+			to BAD_HEADER_READ_CONFIG: /*---------*/ jmp printBadHeaderReadConfig;
+			to BAD_DEPTH_READ_CONFIG: /*----------*/ jmp printBadDepthReadConfig;
+			to BAD_COMPRESSION_READ_CONFIG: /*----*/ jmp printBadCompressionReadConfig;
+			to UNSUPPORTED_HEIGHT_READ_CONFIG: /*-*/ jmp printUnsupportedHeightReadConfig;
+			to BAD_SIZE_READ_CONFIG: /*-----------*/ jmp printBadSizeReadConfig;
+			to FAILED_READ_CONFIG: /*-------------*/ jmp printFailedReadConfig;
+			to BAD_PIXELS_READ_CONFIG: /*---------*/ jmp printBadPixelsReadConfig;
+			to BAD_IMAGE_READ_CONFIG: /*----------*/ jmp printBadImageReadConfig;
+			off: /*-------------------------------*/ brk;
 		end
 		free(string);
 		popPointer(token);
@@ -4809,13 +4818,13 @@ READCONFIG(){
 			printError("\tpattern | %s", *current);
 			jmp printHelpInstructionParametersLoop;
 			printHelpInstructionParametersLoop: switch *(inc n) over
-				to NoneInstruction: /*-----*/ jmp noneInstruction;
-				to StringInstruction: /*---*/ jmp stringInstruction;
-				to ExecuteInstruction: /*--*/ jmp executeInstruction;
-				to NameListInstruction: /*-*/ jmp nameListInstruction;
-				to NameInstruction: /*-----*/ jmp nameInstruction;
-				to NumberInstruction: /*---*/ jmp numberInstruction;
-				off: /*--------------------*/ jmp printHelpInstructionParametersLoopExit;
+				to NONE_INSTRUCTION: /*------*/ jmp noneInstruction;
+				to STRING_INSTRUCTION: /*----*/ jmp stringInstruction;
+				to EXECUTE_INSTRUCTION: /*---*/ jmp executeInstruction;
+				to NAME_LIST_INSTRUCTION: /*-*/ jmp nameListInstruction;
+				to NAME_INSTRUCTION: /*------*/ jmp nameInstruction;
+				to NUMBER_INSTRUCTION: /*----*/ jmp numberInstruction;
+				off: /*----------------------*/ jmp printHelpInstructionParametersLoopExit;
 			end
 			noneInstruction:{
 				printError(" <unimplemented>");
@@ -4943,7 +4952,7 @@ MATCHNAMELIST(){
 	jmp matchNameLoop;
 	matchNameLoop:{
 		if(!findString(root, &current)){
-			ret InvalidNameNameList;
+			ret INVALID_NAME_NAME_LIST;
 		}
 		value |= !!(*root).returnedCounter * (1 << ((*root).returnedCounter - 1));
 		jmp matchBar;
@@ -4961,7 +4970,7 @@ MATCHNAMELIST(){
 	}
 	advance:{
 		if(inc current >= statementWall){
-			ret PrematureEndNameList;
+			ret PREMATURE_END_NAME_LIST;
 		}
 		inc current;
 		jmp matchNameLoop;
@@ -4969,13 +4978,13 @@ MATCHNAMELIST(){
 	successful:{
 		*valueReturn = value;
 		*statementCurrentReturn = current;
-		ret SuccessNameList;
+		ret SUCCESS_NAME_LIST;
 	}
 }
 MATCHINTEGER(){
-	#define Level0JmpPoint /*-*/ (0)
-	#define Level1JmpPoint /*-*/ (1)
-	#define Level2JmpPoint /*-*/ (2)
+	#define LEVEL0_JMP_POINT /*-*/ (0)
+	#define LEVEL1_JMP_POINT /*-*/ (1)
+	#define LEVEL2_JMP_POINT /*-*/ (2)
 	char *current = *statementCurrent - 1;
 	int number = 0;
 	char op = '\0';
@@ -4984,7 +4993,7 @@ MATCHINTEGER(){
 	int i1 = 0;
 	char o0 = '\0';
 	char o1 = '\0';
-	setJmpPoint(Level0);
+	jmpPoint = LEVEL0_JMP_POINT;
 	jmp matchWhitespace0Loop;
 	matchWhitespace0Loop:{
 		if(inc current >= statementWall){
@@ -5238,9 +5247,9 @@ MATCHINTEGER(){
 		off: /*----*/ op = '\0'; /*-----*/ jmp matchOperationReturnPoint;
 	end
 	matchOperationReturnPoint: switch jmpPoint over
-		to Level0JmpPoint: /*-*/ jmp switchOperation0;
-		to Level1JmpPoint: /*-*/ jmp switchOperation1;
-		off: /*---------------*/ jmp switchOperation2;
+		to LEVEL0_JMP_POINT: /*-*/ jmp switchOperation0;
+		to LEVEL1_JMP_POINT: /*-*/ jmp switchOperation1;
+		off: /*-----------------*/ jmp switchOperation2;
 	end
 	switchOperation0: switch op over
 		to '\0': /*-*/ jmp level0;
@@ -5270,13 +5279,13 @@ MATCHINTEGER(){
 	level1:{
 		i0 = number;
 		o0 = op;
-		setJmpPoint(Level1);
+		jmpPoint = LEVEL1_JMP_POINT;
 		jmp matchWhitespace0Loop;
 	}
 	level2:{
 		i1 = number;
 		o1 = op;
-		setJmpPoint(Level2);
+		jmpPoint = LEVEL2_JMP_POINT;
 		jmp matchWhitespace0Loop;
 	}
 	level1End:{
@@ -5342,23 +5351,23 @@ MATCHINTEGER(){
 	validNumber:{
 		*statementCurrent = current + 1;
 		*returnValue = i0;
-		ret ValidNumber;
+		ret VALID_NUMBER;
 	}
 	nonNumber:{
 		*statementCurrent = current + 1;
-		ret NonNumber;
+		ret NON_NUMBER;
 	}
 	overflownNumber:{
 		*statementCurrent = current + 1;
-		ret OverflownNumber;
+		ret OVERFLOWN_NUMBER;
 	}
 	dividedByZeroNumber:{
 		*statementCurrent = current + 1;
-		ret DividedByZeroNumber;
+		ret DIVIDED_BY_ZERO_NUMBER;
 	}
-	#undef  Level2JmpPoint
-	#undef  Level1JmpPoint
-	#undef  Level0JmpPoint
+	#undef  LEVEL2_JMP_POINT
+	#undef  LEVEL1_JMP_POINT
+	#undef  LEVEL0_JMP_POINT
 }
 MATCHSTRING(){
 	#define STRING_BLOCK_SIZE /*-*/ (1024)
@@ -5417,11 +5426,11 @@ MATCHSTRING(){
 	#undef  STRING_BLOCK_SIZE
 }
 MATCHEXECUTE(){
-	#define EXECUTE_BLOCK_SIZE /*-----*/ (1024)
-	#define ROOT_UID /*---------------*/ (0)
-	#define PrependStringOperation /*-*/ (0)
-	#define GivenStringOperation /*---*/ (1)
-	#define AppendStringOperation /*--*/ (2)
+	#define EXECUTE_BLOCK_SIZE /*-------*/ (1024)
+	#define ROOT_UID /*-----------------*/ (0)
+	#define PREPEND_STRING_OPERATION /*-*/ (0)
+	#define GIVEN_STRING_OPERATION /*---*/ (1)
+	#define APPEND_STRING_OPERATION /*--*/ (2)
 	const uid_t uid = geteuid();
 	char *current = *statementCurrent;
 	uint allocated = 0;
@@ -5430,7 +5439,7 @@ MATCHEXECUTE(){
 	uint dataStartToken = pushPointer(dataStart, "matched execute pointer", iFree);
 	char *dataCurrent = dataStart;
 	char *string = current;
-	bool operation = AppendStringOperation;
+	bool operation = APPEND_STRING_OPERATION;
 	jmp validateMalloc;
 	validateMalloc:{
 		if(!dataStart){
@@ -5441,7 +5450,7 @@ MATCHEXECUTE(){
 	pickPrivilegedUnprivilegedPath:{
 		if(uid == ROOT_UID){
 			string = "su $(logname) -c \'";
-			operation = PrependStringOperation;
+			operation = PREPEND_STRING_OPERATION;
 		}
 		jmp matchStringLoop;
 	}
@@ -5468,13 +5477,13 @@ MATCHEXECUTE(){
 		jmp nextString;
 	}
 	nextString: switch operation over
-		to PrependStringOperation:{
-			operation = GivenStringOperation;
+		to PREPEND_STRING_OPERATION:{
+			operation = GIVEN_STRING_OPERATION;
 			string = current;
 			jmp matchStringLoop;
 		}
-		to GivenStringOperation:{
-			operation = AppendStringOperation;
+		to GIVEN_STRING_OPERATION:{
+			operation = APPEND_STRING_OPERATION;
 			current = inc string;
 			string = "\'";
 			jmp matchStringLoop;
@@ -5516,9 +5525,9 @@ MATCHEXECUTE(){
 		*executeToken = dataStartToken;
 		ret true;
 	}
-	#undef  AppendStringOperation
-	#undef  GivenStringOperation
-	#undef  PrependStringOperation
+	#undef  APPEND_STRING_OPERATION
+	#undef  GIVEN_STRING_OPERATION
+	#undef  PREPEND_STRING_OPERATION
 	#undef  ROOT_UID
 	#undef  EXECUTE_BLOCK_SIZE
 }
@@ -5557,7 +5566,7 @@ READIMAGE(){
 	jmp openFile;
 	openFile:{
 		if(!(file = fopen(path, "rb"))){
-			returnValue = CannotOpenReadConfig;
+			returnValue = CANNOT_OPEN_READ_CONFIG;
 			jmp failedImage;
 		}
 		fileToken = pushPointer(file, "image file", fclose);
@@ -5566,7 +5575,7 @@ READIMAGE(){
 	readHeaders:{
 		uint8 header[FILE_HEADER_SIZE + BITMAPINFOHEADER];
 		if(fread(header, sizeof(uint8), FILE_HEADER_SIZE + 34, file) != FILE_HEADER_SIZE + 34){
-			returnValue = CannotReadReadConfig;
+			returnValue = CANNOT_READ_READ_CONFIG;
 			jmp failedImage;
 		}
 		b /*-----------*/ = *(uint8  *)(header + 0);
@@ -5580,7 +5589,7 @@ READIMAGE(){
 	}
 	queryFileFormat:{
 		if(b != 'B' or m != 'M'){
-			returnValue = UnsupportedFormatReadConfig;
+			returnValue = UNSUPPORTED_FORMAT_READ_CONFIG;
 			jmp failedImage;
 		}
 		jmp queryHeaderSupport;
@@ -5596,7 +5605,7 @@ READIMAGE(){
 		off: /*-------------------*/ *errorMessage = "unrecognized header"; /*--------------------*/ jmp printHeaderError;
 	end
 	printHeaderError:{
-		returnValue = BadHeaderReadConfig;
+		returnValue = BAD_HEADER_READ_CONFIG;
 		jmp failedImage;
 	}
 	queryDepth: switch depth over
@@ -5609,7 +5618,7 @@ READIMAGE(){
 		off: /*---*/ *errorMessage = "unknown depth not supported"; /*-*/ jmp printDepthError;
 	end
 	printDepthError:{
-		returnValue = BadDepthReadConfig;
+		returnValue = BAD_DEPTH_READ_CONFIG;
 		jmp failedImage;
 	}
 	queryCompression: switch compression over
@@ -5626,26 +5635,26 @@ READIMAGE(){
 		off: /*------------------*/ *errorMessage = "unrecognized compression used"; /*---------------*/ jmp printCompressionError;
 	end
 	printCompressionError:{
-		returnValue = BadCompressionReadConfig;
+		returnValue = BAD_COMPRESSION_READ_CONFIG;
 		jmp failedImage;
 	}
 	queryHeight:{
 		if(height < 0){
-			returnValue = UnsupportedHeightReadConfig;
+			returnValue = UNSUPPORTED_HEIGHT_READ_CONFIG;
 			jmp failedImage;
 		}
 		jmp setupImage;
 	}
 	setupImage:{
 		if(fseek(file, FILE_HEADER_SIZE + headerSize, SEEK_SET)){
-			returnValue = BadSizeReadConfig;
+			returnValue = BAD_SIZE_READ_CONFIG;
 			jmp failedImage;
 		}
 		(*image).width = width;
 		(*image).height = height;
 		(*image).size = width * height * 4;
 		if(!(data = malloc((*image).size * sizeof(uint8)))){
-			returnValue = FailedReadConfig;
+			returnValue = FAILED_READ_CONFIG;
 			jmp failedImage;
 		}
 		dataToken = pushPointer(data, "image data pointer", iFree);
@@ -5662,10 +5671,10 @@ READIMAGE(){
 		readRowLoop:{
 			if(fread(current, sizeof(uint8), amount, file) != amount){
 				if(current == start){
-					returnValue = BadPixelsReadConfig;
+					returnValue = BAD_PIXELS_READ_CONFIG;
 					jmp failedImage;
 				}
-				returnValue = BadImageReadConfig;
+				returnValue = BAD_IMAGE_READ_CONFIG;
 				jmp failedImage;
 			}
 			if(depth == 32 and (*current & 0x00FFFFFF)){
@@ -5692,7 +5701,7 @@ READIMAGE(){
 		popPointer(fileToken);
 		(*image).data = data;
 		(*image).dataToken = dataToken;
-		ret SuccessReadConfig;
+		ret SUCCESS_READ_CONFIG;
 	}
 	failedImage:{
 		free(data);
@@ -5871,13 +5880,13 @@ PRINTCONFIGERROR(){
 		jmp printInstructionParameterLoop;
 	}
 	printInstructionParameterLoop: switch *(inc instructionStart) over
-		to NoneInstruction: /*-----*/ jmp noneInstruction;
-		to StringInstruction: /*---*/ jmp stringInstruction;
-		to ExecuteInstruction: /*--*/ jmp executeInstruction;
-		to NameListInstruction: /*-*/ jmp nameListInstruction;
-		to NameInstruction: /*-----*/ jmp nameInstruction;
-		to NumberInstruction: /*---*/ jmp numberInstruction;
-		off: /*--------------------*/ jmp printInstructionParameterLoopExit;
+		to NONE_INSTRUCTION: /*------*/ jmp noneInstruction;
+		to STRING_INSTRUCTION: /*----*/ jmp stringInstruction;
+		to EXECUTE_INSTRUCTION: /*---*/ jmp executeInstruction;
+		to NAME_LIST_INSTRUCTION: /*-*/ jmp nameListInstruction;
+		to NAME_INSTRUCTION: /*------*/ jmp nameInstruction;
+		to NUMBER_INSTRUCTION: /*----*/ jmp numberInstruction;
+		off: /*----------------------*/ jmp printInstructionParameterLoopExit;
 	end
 	noneInstruction:{
 		fprintf(errorStream, " <unimplemented>");
