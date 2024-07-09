@@ -148,11 +148,14 @@ SOFTWARE. */
 	#define PROGRAM_NAME /*-------------------*/ "microsound"
 
 	#define PTHREAD_CREATE_SUCCESS /*---------*/ (0)
+	#define PTHREAD_SETCANCELSTATE_SUCCESS /*-*/ (0)
+	#define PTHREAD_SETCANCELTYPE_SUCCESS /*--*/ (0)
 	#define PTHREAD_MUTEX_INIT_SUCCESS /*-----*/ (0)
 	#define PTHREAD_MUTEX_LOCK_SUCCESS /*-----*/ (0)
 	#define PTHREAD_MUTEX_TRYLOCK_SUCCESS /*--*/ (0)
 	#define PTHREAD_MUTEX_UNLOCK_SUCCESS /*---*/ (0)
 	#define PTHREAD_MUTEX_DESTROY_SUCCESS /*--*/ (0)
+	#define PTHREAD_CANCEL_SUCCESS /*---------*/ (0)
 	#define PTHREAD_JOIN_SUCCESS /*-----------*/ (0)
 
 	#define STAT_PATH /*----------------------*/ ("/tmp/" PROGRAM_NAME)
@@ -263,6 +266,7 @@ SOFTWARE. */
 	#define READIMAGE() /*--------------------*/ local uint8        readImage(const char *const path, const char **errorMessage, Image *image)
 	#define EXEC() /*-------------------------*/ local void         exec(const char *const string)
 	#define GETPOINTERMONITOR() /*------------*/ local Monitor *    getPointerMonitor(void)
+	#define CANCELTHREADS() /*----------------*/ local void         cancelThreads(void)
 	#define CLEANUP() /*----------------------*/ local void         cleanup(void)
 	#define PRINTERROR() /*-------------------*/ local void         printError(const char *const message, ...)
 	#define PRINTTITLEDERROR() /*-------------*/ local void         printTitledError(const char *const title, const char *const message)
@@ -539,6 +543,7 @@ SOFTWARE. */
 	local uint /*-------------------------*/ sharedStartToken;
 	local char * /*-----------------------*/ sharedCurrent;
 	local pthread_t /*--------------------*/ pulseaudioThread;
+	local bool /*-------------------------*/ pulseaudioThreadCreated;
 	local pa_threaded_mainloop * /*-------*/ mainloop;
 	local pa_context * /*-----------------*/ context;
 	local xcb_connection_t * /*-----------*/ connection;
@@ -909,6 +914,7 @@ SOFTWARE. */
 	READIMAGE();
 	EXEC();
 	GETPOINTERMONITOR();
+	CANCELTHREADS();
 	CLEANUP();
 	PRINTUNACCOUNTEDFORPOINTERS();
 	PRINTERROR();
@@ -1528,7 +1534,7 @@ int main(int argumentAmount, const char *const *argument){
 		errorStream /*---------------*/ = DEFAULT_ERROR_STREAM;
 		errorStreamToken /*----------*/ = 0;
 		quitting /*------------------*/ = false;
-		pulseaudioThread /*----------*/ = 0;
+		pulseaudioThreadCreated /*---*/ = false;
 		mainloop /*------------------*/ = 0;
 		connection /*----------------*/ = NULL;
 		connectionToken /*-----------*/ = 0;
@@ -1543,6 +1549,7 @@ int main(int argumentAmount, const char *const *argument){
 		eventToken /*----------------*/ = 0;
 		exposeEvent.response_type /*-*/ = XCB_EXPOSE;
 		exposeEvent.count /*---------*/ = 0;
+		pulseaudioEvent /*-----------*/ = NONE_PULSEAUDIO_EVENT;
 		if(pthread_mutex_init(&memorySegmentLock, NULL) != PTHREAD_MUTEX_INIT_SUCCESS){
 			printTitledError("pthread error", "could not init memory segment mutex");
 			ret 0;
@@ -1761,9 +1768,10 @@ int main(int argumentAmount, const char *const *argument){
 		jmp startConcurrentThreads;
 	}
 	startConcurrentThreads:{
-		pulseaudioEvent = NONE_PULSEAUDIO_EVENT;
+		pulseaudioThreadCreated = true;
 		if(pthread_create(&pulseaudioThread, NULL, pulseaudioMain, NULL) != PTHREAD_CREATE_SUCCESS){
 			printTitledError("pthread error", "could not create pulseaudio thread");
+			pulseaudioThreadCreated = false;
 		}
 		jmp establishServerConnection;
 	}
@@ -2564,13 +2572,9 @@ int main(int argumentAmount, const char *const *argument){
 		jmp eventLoopCheckShortcuts;
 	}
 	mainEmergencyExit:{
+		cancelThreads();
 		if(mainloop){
 			pa_threaded_mainloop_stop(mainloop);
-		}
-		if(pulseaudioThread){
-			if(pthread_join(pulseaudioThread, NULL) != PTHREAD_JOIN_SUCCESS){
-				printTitledError("pthread error", "could not join pulseaudio thread");
-			}
 		}
 		free(event);
 		popPointer(eventToken);
@@ -2608,8 +2612,7 @@ QUIT(){
 				ret;
 			}
 			printTitledNamedError("quitting error", "could not free", labelExamined);
-			cleanup();
-			exit(EXIT_SUCCESS);
+			jmp exit;
 		}
 		if(processingSignal and signal != SIGINT){
 			ret;
@@ -2654,9 +2657,9 @@ QUIT(){
 	exitWithError:{
 		quitting = true;
 		printTitledError("signal received", message);
+		cancelThreads();
 		if(dynamicDataSegment.allocated <= 1){
-			cleanup();
-			exit(EXIT_SUCCESS);
+			jmp exit;
 		}
 		start = dynamicDataSegment.data;
 		current = start + 1;
@@ -2683,6 +2686,9 @@ QUIT(){
 		if(inc current < wall){
 			jmp freePointedVariablesLoop;
 		}
+		jmp exit;
+	}
+	exit:{
 		cleanup();
 		exit(EXIT_SUCCESS);
 	}
@@ -5769,6 +5775,18 @@ GETPOINTERMONITOR(){
 		}
 	}
 	ret monitorStart;
+}
+CANCELTHREADS(){
+	if(pulseaudioThreadCreated){
+		if(pthread_cancel(pulseaudioThread) != PTHREAD_CANCEL_SUCCESS){
+			printTitledError("pthread error", "could not cancel pulseaudio thread");
+		}
+		if(pthread_join(pulseaudioThread, NULL) != PTHREAD_JOIN_SUCCESS){
+			printTitledError("pthread error", "could not join pulseaudio thread");
+		}
+		pulseaudioThreadCreated = false;
+	}
+	ret;
 }
 CLEANUP(){
 	deleteMemoryManager();
