@@ -263,6 +263,7 @@ SOFTWARE. */
 	#define READIMAGE() /*--------------------*/ local uint8        readImage(const char *const path, const char **errorMessage, Image *image)
 	#define EXEC() /*-------------------------*/ local void         exec(const char *const string)
 	#define GETPOINTERMONITOR() /*------------*/ local Monitor *    getPointerMonitor(void)
+	#define CLEANUP() /*----------------------*/ local void         cleanup(void)
 	#define PRINTERROR() /*-------------------*/ local void         printError(const char *const message, ...)
 	#define PRINTTITLEDERROR() /*-------------*/ local void         printTitledError(const char *const title, const char *const message)
 	#define PRINTTITLEDQUOTEDERROR() /*-------*/ local void         printTitledQuotedError(const char *const title, const char *const argument, const char *const message)
@@ -525,6 +526,7 @@ SOFTWARE. */
 	local const char * /*-----------------*/ defaultSinkName;
 	local const char * /*-----------------*/ labelExamined;
 	local const char * /*-----------------*/ executeString;
+	local pthread_mutex_t /*--------------*/ memorySegmentLock;
 	local bool /*-------------------------*/ mustOpenErrorStream;
 	local FILE * /*-----------------------*/ errorStream;
 	local uint /*-------------------------*/ errorStreamToken;
@@ -591,7 +593,6 @@ SOFTWARE. */
 
 
 
-	pthread_mutex_t /*--------------------*/ pushPointerLock;
 	xcb_expose_event_t /*-----------------*/ exposeEvent;
 
 
@@ -819,7 +820,6 @@ SOFTWARE. */
 
 	#define getInstruction(i) /*-----*/ (i##Instruction)
 	#define getInstructionData(i) /*-*/ (i##InstructionData)
-
 	#define getGlobalScope(i) /*-----*/ { \
 		  get##i(help) \
 		, get##i(expand) \
@@ -846,14 +846,12 @@ SOFTWARE. */
 		, get##i(ungrabButton) \
 		, get##i(stop) \
 	}
-
 	#define getScope1Scope(i) /*-----*/ { \
 		  get##i(help) \
 		, get##i(expand) \
 		, get##i(contract) \
 		, get##i(stop) \
 	}
-
 	local const Instruction *const /*-----*/ globalScopeInstruction[] = getGlobalScope(Instruction);
 	local const Instruction *const /*-----*/ scope1ScopeInstruction[] = getScope1Scope(Instruction);
 	local StringNodeRoot *const *const /*-*/ globalScopeInstructionData[] = getGlobalScope(InstructionData);
@@ -911,6 +909,7 @@ SOFTWARE. */
 	READIMAGE();
 	EXEC();
 	GETPOINTERMONITOR();
+	CLEANUP();
 	PRINTUNACCOUNTEDFORPOINTERS();
 	PRINTERROR();
 	PRINTTITLEDERROR();
@@ -1544,8 +1543,8 @@ int main(int argumentAmount, const char *const *argument){
 		eventToken /*----------------*/ = 0;
 		exposeEvent.response_type /*-*/ = XCB_EXPOSE;
 		exposeEvent.count /*---------*/ = 0;
-		if(pthread_mutex_init(&pushPointerLock, NULL) != PTHREAD_MUTEX_INIT_SUCCESS){
-			printTitledError("pthread error", "could not init popPointer() mutex");
+		if(pthread_mutex_init(&memorySegmentLock, NULL) != PTHREAD_MUTEX_INIT_SUCCESS){
+			printTitledError("pthread error", "could not init memory segment mutex");
 			ret 0;
 		}
 		initMemoryManager();
@@ -2593,11 +2592,7 @@ int main(int argumentAmount, const char *const *argument){
 			printError("%s%s: %s%s:%s %s", colorStart, programName, colorError, "warning", colorEnd, "program exited with unaccounted for data pointers, namely: ");
 			printUnaccountedForPointers(dynamicDataSegment.data + 1, dynamicDataSegment.data + dynamicDataSegment.allocated);
 		}
-		deleteMemoryManager();
-		if(pthread_mutex_destroy(&pushPointerLock) != PTHREAD_MUTEX_DESTROY_SUCCESS){
-			printTitledError("pthread error", "could not destroy popPointer() mutex");
-		}
-		closeErrorStream();
+		cleanup();
 		ret 0;
 	}
 }
@@ -2613,11 +2608,7 @@ QUIT(){
 				ret;
 			}
 			printTitledNamedError("quitting error", "could not free", labelExamined);
-			deleteMemoryManager();
-			if(pthread_mutex_destroy(&pushPointerLock) != PTHREAD_MUTEX_DESTROY_SUCCESS){
-				printTitledError("pthread error", "could not destroy popPointer() mutex");
-			}
-			closeErrorStream();
+			cleanup();
 			exit(EXIT_SUCCESS);
 		}
 		if(processingSignal and signal != SIGINT){
@@ -2664,11 +2655,7 @@ QUIT(){
 		quitting = true;
 		printTitledError("signal received", message);
 		if(dynamicDataSegment.allocated <= 1){
-			deleteMemoryManager();
-			if(pthread_mutex_destroy(&pushPointerLock) != PTHREAD_MUTEX_DESTROY_SUCCESS){
-				printTitledError("pthread error", "could not destroy popPointer() mutex");
-			}
-			closeErrorStream();
+			cleanup();
 			exit(EXIT_SUCCESS);
 		}
 		start = dynamicDataSegment.data;
@@ -2696,11 +2683,7 @@ QUIT(){
 		if(inc current < wall){
 			jmp freePointedVariablesLoop;
 		}
-		deleteMemoryManager();
-		if(pthread_mutex_destroy(&pushPointerLock) != PTHREAD_MUTEX_DESTROY_SUCCESS){
-			printTitledError("pthread error", "could not destroy popPointer() mutex");
-		}
-		closeErrorStream();
+		cleanup();
 		exit(EXIT_SUCCESS);
 	}
 }
@@ -2709,24 +2692,6 @@ GETSHAREDCHARACTER(){
 	(void)configFile;
 	inc sharedCurrent;
 	ret c;
-}
-PRINTUNACCOUNTEDFORPOINTERS(){
-	if(current < wall){
-		printPointedVariablesLoop:{
-			if((*current).data){
-				labelExamined = (*current).label;
-				printError("%s", labelExamined);
-			}
-			if(inc current < wall){
-				if((*(current - 1)).data){
-					printError(", ");
-				}
-				jmp printPointedVariablesLoop;
-			}
-		}
-	}
-	printError("\n");
-	ret;
 }
 INITMEMORYMANAGER(){
 	#define DYNAMIC_DATA_SEGMENT_BLOCK_SIZE /*-*/ (16)
@@ -2743,49 +2708,76 @@ INITMEMORYMANAGER(){
 }
 PUSHPOINTER(){
 	uint32 token;
-    if(pthread_mutex_lock(&pushPointerLock) != PTHREAD_MUTEX_LOCK_SUCCESS){
-		printTitledError("pthread error", "could not lock popPointer() mutex");
-		ret 0;
-	}
-	if(!pointer){
-		ret 0;
-	}
-	token = s.allocated;
-	if(token == s.size){
-		void *temp;
-		s.size += DYNAMIC_DATA_SEGMENT_BLOCK_SIZE;
-		if(!(temp = realloc(s.data, s.size * sizeof(Pointer)))){
+	jmp checkPointerValidity;
+	checkPointerValidity:{
+		if(!pointer){
 			ret 0;
 		}
-		s.data = temp;
+		if(pthread_mutex_lock(&memorySegmentLock) != PTHREAD_MUTEX_LOCK_SUCCESS){
+			printTitledError("pthread error", "could not lock pushPointer() mutex");
+			ret 0;
+		}
+		jmp appendPointer;
 	}
-	(*(s.data + token)).label = label;
-	(*(s.data + token)).data = pointer;
-	(*(s.data + token)).token = token;
-	(*(s.data + token)).free = freeFunction;
-	inc s.allocated;
-    if(pthread_mutex_unlock(&pushPointerLock) != PTHREAD_MUTEX_UNLOCK_SUCCESS){
-		printTitledError("pthread error", "could not unlock popPointer() mutex");
+	appendPointer:{
+		token = s.allocated;
+		if(token == s.size){
+			void *temp;
+			s.size += DYNAMIC_DATA_SEGMENT_BLOCK_SIZE;
+			if(!(temp = realloc(s.data, s.size * sizeof(Pointer)))){
+				token = 0;
+				jmp emergencyExit;
+			}
+			s.data = temp;
+		}
+		(*(s.data + token)).label = label;
+		(*(s.data + token)).data = pointer;
+		(*(s.data + token)).token = token;
+		(*(s.data + token)).free = freeFunction;
+		inc s.allocated;
+		jmp emergencyExit;
 	}
-	ret token;
+	emergencyExit:{
+		if(pthread_mutex_unlock(&memorySegmentLock) != PTHREAD_MUTEX_UNLOCK_SUCCESS){
+			printTitledError("pthread error", "could not unlock pushPointer() mutex");
+		}
+		ret token;
+	}
 }
 POPPOINTER(){
-	if(!token){
-		ret;
+	jmp checkTokenValidity;
+	checkTokenValidity:{
+		if(!token){
+			ret;
+		}
+		if(pthread_mutex_lock(&memorySegmentLock) != PTHREAD_MUTEX_LOCK_SUCCESS){
+			printTitledError("pthread error", "could not lock popPointer() mutex");
+			ret;
+		}
+		(*(s.data + token)).data = NULL;
+		jmp trimSegment;
 	}
-	(*(s.data + token)).data = NULL;
-	jmp trimSegment;
 	trimSegment:{
 		if(!(*(s.data + s.allocated - 1)).data){
 			dec s.allocated;
 			jmp trimSegment;
 		}
+		if(pthread_mutex_unlock(&memorySegmentLock) != PTHREAD_MUTEX_UNLOCK_SUCCESS){
+			printTitledError("pthread error", "could not unlock popPointer() mutex");
+		}
 		ret;
 	}
 }
 UPDATEPOINTER(){
+	if(pthread_mutex_lock(&memorySegmentLock) != PTHREAD_MUTEX_UNLOCK_SUCCESS){
+		printTitledError("pthread error", "could not lock updatePointer() mutex");
+		ret;
+	}
 	if(token){
 		(*(s.data + token)).data = pointer;
+	}
+	if(pthread_mutex_unlock(&memorySegmentLock) != PTHREAD_MUTEX_UNLOCK_SUCCESS){
+		printTitledError("pthread error", "could not unlock updatePointer() mutex");
 	}
 	ret;
 }
@@ -5777,6 +5769,32 @@ GETPOINTERMONITOR(){
 		}
 	}
 	ret monitorStart;
+}
+CLEANUP(){
+	deleteMemoryManager();
+	if(pthread_mutex_destroy(&memorySegmentLock) != PTHREAD_MUTEX_DESTROY_SUCCESS){
+		printTitledError("pthread error", "could not destroy memory segment mutex");
+	}
+	closeErrorStream();
+	ret;
+}
+PRINTUNACCOUNTEDFORPOINTERS(){
+	if(current < wall){
+		printPointedVariablesLoop:{
+			if((*current).data){
+				labelExamined = (*current).label;
+				printError("%s", labelExamined);
+			}
+			if(inc current < wall){
+				if((*(current - 1)).data){
+					printError(", ");
+				}
+				jmp printPointedVariablesLoop;
+			}
+		}
+	}
+	printError("\n");
+	ret;
 }
 PRINTERROR(){
 	if(openErrorStream()){
