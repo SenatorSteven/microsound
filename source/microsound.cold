@@ -74,6 +74,10 @@
 	what happens when reading config while the windows are showing?
 */
 
+/*!
+	should instead get the current sink for sound rather than the default one, i think, if that's possible.
+*/
+
 
 
 
@@ -368,7 +372,11 @@ SOFTWARE. */
 		uint32 /*--------------*/ nextOffset;
 		uint16 /*--------------*/ modifier;
 		Command /*-------------*/ command;
-		uint8 /*---------------*/ pad0[5];
+		uint8 /*---------------*/ field0;
+		uint8 /*---------------*/ field1;
+		uint8 /*---------------*/ field2;
+		uint8 /*---------------*/ field3;
+		uint8 /*---------------*/ field4;
 	} ModifierNode;
 
 	def struct{
@@ -2506,10 +2514,10 @@ int main(int argumentAmount, const char *const *argument){
 			if(inc monitorCurrent < monitorWall){
 				jmp freeMonitorResourcesLoop;
 			}
+			free(monitorData);
+			popPointer(monitorDataToken);
+			jmp storeMonitors;
 		}
-		free(monitorData);
-		popPointer(monitorDataToken);
-		jmp storeMonitors;
 	}
 	randrError:{
 		printErrorEvent(event);
@@ -3807,13 +3815,35 @@ READCONFIG(){
 	const Instruction *instructionStart;
 	const Instruction *instructionCurrent;
 	const Instruction *name0Instruction;
-	const Instruction *name1Instruction = NULL;
-	const Instruction *nameListInstruction = NULL;
+	const Instruction *name1Instruction;
+	const Instruction *name2Instruction;
+	const Instruction *name3Instruction;
+	const Instruction *name4Instruction;
+	const Instruction *nameList0Instruction;
+	const Instruction *nameList1Instruction;
+	const Instruction *nameList2Instruction;
+	const Instruction *nameList3Instruction;
+	const Instruction *nameList4Instruction;
 	const Instruction *integer0Instruction;
-	const Instruction *integer1Instruction = NULL;
-	const Instruction *stringInstruction = NULL;
-	const Instruction *executeInstruction = NULL;
-	const Instruction *imageInstruction = NULL;
+	const Instruction *integer1Instruction;
+	const Instruction *integer2Instruction;
+	const Instruction *integer3Instruction;
+	const Instruction *integer4Instruction;
+	const Instruction *string0Instruction;
+	const Instruction *string1Instruction;
+	const Instruction *string2Instruction;
+	const Instruction *string3Instruction;
+	const Instruction *string4Instruction;
+	const Instruction *execute0Instruction;
+	const Instruction *execute1Instruction;
+	const Instruction *execute2Instruction;
+	const Instruction *execute3Instruction;
+	const Instruction *execute4Instruction;
+	const Instruction *image0Instruction;
+	const Instruction *image1Instruction;
+	const Instruction *image2Instruction;
+	const Instruction *image3Instruction;
+	const Instruction *image4Instruction;
 	const char *imageErrorMessage;
 	FILE *configFile = NULL;
 	uint configFileToken;
@@ -3823,16 +3853,46 @@ READCONFIG(){
 	char *statementCurrent;
 	char *statementWall = NULL;
 	char *statementConcreteWall;
-	uint8 name0Return = 0;
-	uint8 name1Return = 0;
-	uint8 nameListReturn = 0;
-	int integer0Return = 0;
-	int integer1Return = 0;
-	char *stringReturn = NULL;
-	uint stringToken = 0;
-	char *executeReturn = NULL;
-	uint executeToken = 0;
-	Image imageReturn;
+	uint8 name0Return;
+	uint8 name1Return;
+	uint8 name2Return;
+	uint8 name3Return;
+	uint8 name4Return;
+	uint8 nameList0Return;
+	uint8 nameList1Return;
+	uint8 nameList2Return;
+	uint8 nameList3Return;
+	uint8 nameList4Return;
+	int integer0Return;
+	int integer1Return;
+	int integer2Return;
+	int integer3Return;
+	int integer4Return;
+	char *string0Return = NULL;
+	uint string0Token = 0;
+	char *string1Return = NULL;
+	uint string1Token = 0;
+	char *string2Return = NULL;
+	uint string2Token = 0;
+	char *string3Return = NULL;
+	uint string3Token = 0;
+	char *string4Return = NULL;
+	uint string4Token = 0;
+	char *execute0Return = NULL;
+	uint execute0Token = 0;
+	char *execute1Return = NULL;
+	uint execute1Token = 0;
+	char *execute2Return = NULL;
+	uint execute2Token = 0;
+	char *execute3Return = NULL;
+	uint execute3Token = 0;
+	char *execute4Return = NULL;
+	uint execute4Token = 0;
+	Image image0Return;
+	Image image1Return;
+	Image image2Return;
+	Image image3Return;
+	Image image4Return;
 	JmpPoint jmpPoint;
 	uint fileLine = 1;
 	uint statementLine = 0;
@@ -3843,8 +3903,16 @@ READCONFIG(){
 	StringNodeRoot *const *const *currentScopeInstructionData = globalScopeInstructionData;
 	StringNodeRoot *const *instructionCurrentData;
 	StringNodeRoot *currentScopeInstructionRoot = &globalInstructionRoot;
-	imageReturn.data = NULL;
-	imageReturn.dataToken = 0;
+	image0Return.data = NULL;
+	image0Return.dataToken = 0;
+	image1Return.data = NULL;
+	image1Return.dataToken = 0;
+	image2Return.data = NULL;
+	image2Return.dataToken = 0;
+	image3Return.data = NULL;
+	image3Return.dataToken = 0;
+	image4Return.data = NULL;
+	image4Return.dataToken = 0;
 	jmp setupPointers;
 	setupPointers:{
 		if(getConfigChar == fgetc){
@@ -3954,20 +4022,96 @@ READCONFIG(){
 		statementConcreteWall = statementStart + statementSize * sizeof(char);
 		statementLine = 0;
 		itemAmount = 0;
-		free(stringReturn);
-		popPointer(stringToken);
-		free(executeReturn);
-		popPointer(executeToken);
-		free(imageReturn.data);
-		popPointer(imageReturn.dataToken);
-		stringReturn = NULL;
-		stringToken = 0;
-		executeReturn = NULL;
-		executeToken = 0;
-		imageReturn.data = NULL;
-		imageReturn.dataToken = 0;
+		free(string0Return);
+		popPointer(string0Token);
+		free(string1Return);
+		popPointer(string1Token);
+		free(string2Return);
+		popPointer(string2Token);
+		free(string3Return);
+		popPointer(string3Token);
+		free(string4Return);
+		popPointer(string4Token);
+		free(execute0Return);
+		popPointer(execute0Token);
+		free(execute1Return);
+		popPointer(execute1Token);
+		free(execute2Return);
+		popPointer(execute2Token);
+		free(execute3Return);
+		popPointer(execute3Token);
+		free(execute4Return);
+		popPointer(execute4Token);
+		free(image0Return.data);
+		popPointer(image0Return.dataToken);
+		free(image1Return.data);
+		popPointer(image1Return.dataToken);
+		free(image2Return.data);
+		popPointer(image2Return.dataToken);
+		free(image3Return.data);
+		popPointer(image3Return.dataToken);
+		free(image4Return.data);
+		popPointer(image4Return.dataToken);
 		name0Instruction = NULL;
+		name1Instruction = NULL;
+		name2Instruction = NULL;
+		name3Instruction = NULL;
+		name4Instruction = NULL;
+		nameList0Instruction = NULL;
+		nameList1Instruction = NULL;
+		nameList2Instruction = NULL;
+		nameList3Instruction = NULL;
+		nameList4Instruction = NULL;
 		integer0Instruction = NULL;
+		integer1Instruction = NULL;
+		integer2Instruction = NULL;
+		integer3Instruction = NULL;
+		integer4Instruction = NULL;
+		string0Instruction = NULL;
+		string1Instruction = NULL;
+		string2Instruction = NULL;
+		string3Instruction = NULL;
+		string4Instruction = NULL;
+		execute0Instruction = NULL;
+		execute1Instruction = NULL;
+		execute2Instruction = NULL;
+		execute3Instruction = NULL;
+		execute4Instruction = NULL;
+		image0Instruction = NULL;
+		image1Instruction = NULL;
+		image2Instruction = NULL;
+		image3Instruction = NULL;
+		image4Instruction = NULL;
+		string0Return = NULL;
+		string0Token = 0;
+		string1Return = NULL;
+		string1Token = 0;
+		string2Return = NULL;
+		string2Token = 0;
+		string3Return = NULL;
+		string3Token = 0;
+		string4Return = NULL;
+		string4Token = 0;
+		execute0Return = NULL;
+		execute0Token = 0;
+		execute1Return = NULL;
+		execute1Token = 0;
+		execute2Return = NULL;
+		execute2Token = 0;
+		execute3Return = NULL;
+		execute3Token = 0;
+		execute4Return = NULL;
+		execute4Token = 0;
+		image0Return.data = NULL;
+		image0Return.dataToken = 0;
+		image1Return.data = NULL;
+		image1Return.dataToken = 0;
+		image2Return.data = NULL;
+		image2Return.dataToken = 0;
+		image3Return.data = NULL;
+		image3Return.dataToken = 0;
+		image4Return.data = NULL;
+		image4Return.dataToken = 0;
 		jmp getStatement;
 	}
 	getStatement: switch fileChar = getConfigChar(configFile) over
@@ -4312,11 +4456,20 @@ READCONFIG(){
 			jmp printMissingArgumentError;
 		}
 		if(!name0Instruction){
-			name0Instruction = instructionCurrent;
 			namePointer = &name0Return;
-		}else{
-			name1Instruction = instructionCurrent;
+			name0Instruction = instructionCurrent;
+		}elif(!name1Instruction){
 			namePointer = &name1Return;
+			name1Instruction = instructionCurrent;
+		}elif(!name2Instruction){
+			namePointer = &name2Return;
+			name2Instruction = instructionCurrent;
+		}elif(!name3Instruction){
+			namePointer = &name3Return;
+			name3Instruction = instructionCurrent;
+		}else{
+			namePointer = &name4Return;
+			name4Instruction = instructionCurrent;
 		}
 		s = statementCurrent;
 		if(!findString(*instructionCurrentData, &s)){
@@ -4329,11 +4482,27 @@ READCONFIG(){
 		jmp advanceDataInstruction;
 	}
 	matchNameList:{
+		uint8 *nameListPointer;
 		if(statementCurrent >= statementWall){
 			jmp printMissingArgumentError;
 		}
-		nameListInstruction = instructionCurrent;
-		switch matchNameList(*instructionCurrentData, statementWall, &statementCurrent, &nameListReturn) over
+		if(!nameList0Instruction){
+			nameListPointer = &nameList0Return;
+			nameList0Instruction = instructionCurrent;
+		}elif(!nameList1Instruction){
+			nameListPointer = &nameList1Return;
+			nameList1Instruction = instructionCurrent;
+		}elif(!nameList2Instruction){
+			nameListPointer = &nameList2Return;
+			nameList2Instruction = instructionCurrent;
+		}elif(!nameList3Instruction){
+			nameListPointer = &nameList3Return;
+			nameList3Instruction = instructionCurrent;
+		}else{
+			nameListPointer = &nameList4Return;
+			nameList4Instruction = instructionCurrent;
+		}
+		switch matchNameList(*instructionCurrentData, statementWall, &statementCurrent, nameListPointer) over
 			to INVALID_NAME_NAME_LIST: /*--*/ jmp invalidNameNameList;
 			to PREMATURE_END_NAME_LIST: /*-*/ jmp prematureEndNameList;
 			off: /*------------------------*/ jmp advanceDataInstruction;
@@ -4353,11 +4522,20 @@ READCONFIG(){
 			jmp printMissingArgumentError;
 		}
 		if(!integer0Instruction){
-			integer0Instruction = instructionCurrent;
 			integerPointer = &integer0Return;
-		}else{
-			integer1Instruction = instructionCurrent;
+			integer0Instruction = instructionCurrent;
+		}elif(!integer1Instruction){
 			integerPointer = &integer1Return;
+			integer1Instruction = instructionCurrent;
+		}elif(!integer2Instruction){
+			integerPointer = &integer2Return;
+			integer2Instruction = instructionCurrent;
+		}elif(!integer3Instruction){
+			integerPointer = &integer3Return;
+			integer3Instruction = instructionCurrent;
+		}else{
+			integerPointer = &integer4Return;
+			integer4Instruction = instructionCurrent;
 		}
 		switch matchInteger(&statementCurrent, statementWall, integerPointer) over
 			to NON_NUMBER: /*-------------*/ jmp printNonNumberError;
@@ -4379,22 +4557,66 @@ READCONFIG(){
 		jmp getStatementStart;
 	}
 	matchString:{
+		char **stringPointer;
+		uint *stringTokenPointer;
 		if(statementCurrent >= statementWall){
 			jmp printMissingArgumentError;
 		}
-		stringInstruction = instructionCurrent;
-		if(!matchString(&statementCurrent, &stringReturn, &stringToken)){
+		if(!string0Instruction){
+			stringPointer = &string0Return;
+			stringTokenPointer = &string0Token;
+			string0Instruction = instructionCurrent;
+		}elif(!string1Instruction){
+			stringPointer = &string1Return;
+			stringTokenPointer = &string1Token;
+			string1Instruction = instructionCurrent;
+		}elif(!string2Instruction){
+			stringPointer = &string2Return;
+			stringTokenPointer = &string2Token;
+			string2Instruction = instructionCurrent;
+		}elif(!string3Instruction){
+			stringPointer = &string3Return;
+			stringTokenPointer = &string3Token;
+			string3Instruction = instructionCurrent;
+		}else{
+			stringPointer = &string4Return;
+			stringTokenPointer = &string4Token;
+			string4Instruction = instructionCurrent;
+		}
+		if(!matchString(&statementCurrent, stringPointer, stringTokenPointer)){
 			printConfigError("match string error", "could not allocate string data", ';', true, true, false, false, configPath, statementLine, statementStart, statementWall, instructionStart, instructionCurrent, currentScopeInstructionList, currentScopeInstructionRoot, currentScopeInstructionData);
 			jmp getStatementStart;
 		}
 		jmp advanceInstruction;
 	}
 	matchExecuteString:{
+		char **executePointer;
+		uint *executeTokenPointer;
 		if(statementCurrent >= statementWall){
 			jmp printMissingArgumentError;
 		}
-		executeInstruction = instructionCurrent;
-		if(!matchExecute(&statementCurrent, &executeReturn, &executeToken)){
+		if(!execute0Instruction){
+			executePointer = &execute0Return;
+			executeTokenPointer = &execute0Token;
+			execute0Instruction = instructionCurrent;
+		}elif(!execute1Instruction){
+			executePointer = &execute1Return;
+			executeTokenPointer = &execute1Token;
+			execute1Instruction = instructionCurrent;
+		}elif(!execute2Instruction){
+			executePointer = &execute2Return;
+			executeTokenPointer = &execute2Token;
+			execute2Instruction = instructionCurrent;
+		}elif(!execute3Instruction){
+			executePointer = &execute3Return;
+			executeTokenPointer = &execute3Token;
+			execute3Instruction = instructionCurrent;
+		}else{
+			executePointer = &execute4Return;
+			executeTokenPointer = &execute4Token;
+			execute4Instruction = instructionCurrent;
+		}
+		if(!matchExecute(&statementCurrent, executePointer, executeTokenPointer)){
 			printConfigError("match execute error", "could not allocate execute string data", ';', true, true, false, false, configPath, statementLine, statementStart, statementWall, instructionStart, instructionCurrent, currentScopeInstructionList, currentScopeInstructionRoot, currentScopeInstructionData);
 			jmp getStatementStart;
 		}
@@ -4403,15 +4625,34 @@ READCONFIG(){
 	matchImageString:{
 		char *string = NULL;
 		uint token = 0;
+		Image *imagePointer;
+		uint8 readImageReturn;
 		if(statementCurrent >= statementWall){
 			jmp printMissingArgumentError;
 		}
-		imageInstruction = instructionCurrent;
+		if(!image0Instruction){
+			imagePointer = &image0Return;
+			image0Instruction = instructionCurrent;
+		}elif(!image1Instruction){
+			imagePointer = &image1Return;
+			image1Instruction = instructionCurrent;
+		}elif(!image2Instruction){
+			imagePointer = &image2Return;
+			image2Instruction = instructionCurrent;
+		}elif(!image3Instruction){
+			imagePointer = &image3Return;
+			image3Instruction = instructionCurrent;
+		}else{
+			imagePointer = &image4Return;
+			image4Instruction = instructionCurrent;
+		}
 		if(!matchString(&statementCurrent, &string, &token)){
 			printConfigError("match image error", "could not allocate image string data", ';', true, true, false, false, configPath, statementLine, statementStart, statementWall, instructionStart, instructionCurrent, currentScopeInstructionList, currentScopeInstructionRoot, currentScopeInstructionData);
 			jmp getStatementStart;
 		}
-		switch readImage(string, &imageErrorMessage, &imageReturn) over
+		readImageReturn = readImage(string, &imageErrorMessage, &image0Return);
+		free(string); popPointer(token);
+		switch readImageReturn over
 			to CANNOT_OPEN_READ_CONFIG: /*--------*/ jmp printCannotOpenReadConfig;
 			to CANNOT_READ_READ_CONFIG: /*--------*/ jmp printCannotReadReadConfig;
 			to UNSUPPORTED_FORMAT_READ_CONFIG: /*-*/ jmp printUnsupportedFormatReadConfig;
@@ -4423,11 +4664,8 @@ READCONFIG(){
 			to FAILED_READ_CONFIG: /*-------------*/ jmp printFailedReadConfig;
 			to BAD_PIXELS_READ_CONFIG: /*---------*/ jmp printBadPixelsReadConfig;
 			to BAD_IMAGE_READ_CONFIG: /*----------*/ jmp printBadImageReadConfig;
-			off: /*-------------------------------*/ brk;
+			off: /*-------------------------------*/ jmp advanceInstruction;
 		end
-		free(string);
-		popPointer(token);
-		jmp advanceInstruction;
 	}
 	printCannotOpenReadConfig:{
 		printConfigError("match image error", "could not open image file", ';', true, true, false, false, configPath, statementLine, statementStart, statementWall, instructionStart, instructionCurrent, currentScopeInstructionList, currentScopeInstructionRoot, currentScopeInstructionData);
@@ -4504,11 +4742,11 @@ READCONFIG(){
 			jmp getStatementStart;
 		}
 		if(instructionStart == readConfigInstruction){
-			readConfig(false, stringReturn, fgetc);
+			readConfig(false, string0Return, fgetc);
 			jmp getStatementStart;
 		}
 		if(instructionStart == executeInstruction){
-			exec(executeReturn);
+			exec(execute0Return);
 			jmp getStatementStart;
 		}
 		if(instructionStart == offsetXInstruction){
@@ -4589,12 +4827,12 @@ READCONFIG(){
 				free((*pointer).data);
 				popPointer((*pointer).dataToken);
 			}
-			imageReturn.direction = (*pointer).direction;
-			*pointer = imageReturn;
+			image0Return.direction = (*pointer).direction;
+			*pointer = image0Return;
 			(*pointer).x = integer0Return;
 			(*pointer).y = integer1Return;
-			imageReturn.data = NULL;
-			imageReturn.dataToken = 0;
+			image0Return.data = NULL;
+			image0Return.dataToken = 0;
 			jmp getStatementStart;
 		}
 		if(instructionStart == setImageDirectionInstruction){
@@ -4620,20 +4858,20 @@ READCONFIG(){
 				to 5: /*-*/ pointer = &overlayImage; /*---*/ brk;
 				off: /*--*/ pointer = &alphaMapImage; /*--*/ brk;
 			end
-			imageReturn.x = integer0Return;
-			imageReturn.y = integer1Return;
-			overlay(imageReturn.direction, &imageReturn, pointer);
+			image0Return.x = integer0Return;
+			image0Return.y = integer1Return;
+			overlay(image0Return.direction, &image0Return, pointer);
 			jmp getStatementStart;
 		}
 		if(instructionStart == grabKeycodeInstruction or instructionStart == executeGrabKeycodeSubInstruction){
-			if(!insertShortcut(&keycodeShortcut, integer0Return, nameListReturn, name0Return, executeReturn, executeToken)){
+			if(!insertShortcut(&keycodeShortcut, integer0Return, nameList0Return, name0Return, execute0Return, execute0Token)){
 				printConfigError("shortcut error", "could not insert shortcut", ';', true, true, false, false, configPath, statementLine, statementStart, statementWall, instructionStart, instructionCurrent, currentScopeInstructionList, currentScopeInstructionRoot, currentScopeInstructionData);
 				jmp getStatementStart;
 			}
-			executeReturn = NULL;
-			executeToken = 0;
+			execute0Return = NULL;
+			execute0Token = 0;
 			if(name0Return <= lastGlobalCommand){
-				const xcb_void_cookie_t cookie = xcb_grab_key_checked(connection, true, (*screen).root, nameListReturn, integer0Return, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC);
+				const xcb_void_cookie_t cookie = xcb_grab_key_checked(connection, true, (*screen).root, nameList0Return, integer0Return, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC);
 				(void)cookie;
 /*!
 				xcb_generic_error_t *const error = xcb_request_check(connection, cookie);
@@ -4652,7 +4890,7 @@ READCONFIG(){
 				xcb_window_t *windowCurrent;
 				xcb_window_t *const windowWall = windowStart + windowAllocated;
 				grabWindowKeyLoop:{
-					const xcb_void_cookie_t cookie = xcb_grab_key_checked(connection, true, *windowCurrent, nameListReturn, integer0Return, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC);
+					const xcb_void_cookie_t cookie = xcb_grab_key_checked(connection, true, *windowCurrent, nameList0Return, integer0Return, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC);
 					xcb_generic_error_t *const error = xcb_request_check(connection, cookie);
 					uint token = pushPointer(error, "grab key check pointer", iFree);
 					if(error){
@@ -4670,14 +4908,14 @@ READCONFIG(){
 			jmp getStatementStart;
 		}
 		if(instructionStart == grabButtonInstruction or instructionStart == executeGrabButtonSubInstruction){
-			if(!insertShortcut(&buttonShortcut, integer0Return, nameListReturn, name0Return, executeReturn, executeToken)){
+			if(!insertShortcut(&buttonShortcut, integer0Return, nameList0Return, name0Return, execute0Return, execute0Token)){
 				printConfigError("shortcut error", "could not insert shortcut", ';', true, true, false, false, configPath, statementLine, statementStart, statementWall, instructionStart, instructionCurrent, currentScopeInstructionList, currentScopeInstructionRoot, currentScopeInstructionData);
 				jmp getStatementStart;
 			}
-			executeReturn = NULL;
-			executeToken = 0;
+			execute0Return = NULL;
+			execute0Token = 0;
 			if(name0Return <= lastGlobalCommand){
-				const xcb_void_cookie_t cookie = xcb_grab_button_checked(connection, true, (*screen).root, XCB_EVENT_MASK_NO_EVENT, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC, XCB_NONE, XCB_NONE, integer0Return, nameListReturn);
+				const xcb_void_cookie_t cookie = xcb_grab_button_checked(connection, true, (*screen).root, XCB_EVENT_MASK_NO_EVENT, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC, XCB_NONE, XCB_NONE, integer0Return, nameList0Return);
 				(void)cookie;
 /*!
 				xcb_generic_error_t *const error = xcb_request_check(connection, cookie);
@@ -4696,7 +4934,7 @@ READCONFIG(){
 				xcb_window_t *windowCurrent;
 				xcb_window_t *const windowWall = windowStart + windowAllocated;
 				grabWindowButtonLoop:{
-					const xcb_void_cookie_t cookie = xcb_grab_button_checked(connection, true, *windowCurrent, XCB_EVENT_MASK_NO_EVENT, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC, XCB_NONE, XCB_NONE, integer0Return, nameListReturn);
+					const xcb_void_cookie_t cookie = xcb_grab_button_checked(connection, true, *windowCurrent, XCB_EVENT_MASK_NO_EVENT, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC, XCB_NONE, XCB_NONE, integer0Return, nameList0Return);
 					xcb_generic_error_t *const error = xcb_request_check(connection, cookie);
 					uint token = pushPointer(error, "grab button check pointer", iFree);
 					if(error){
@@ -4714,12 +4952,12 @@ READCONFIG(){
 			jmp getStatementStart;
 		}
 		if(instructionStart == ungrabKeycodeInstruction){
-			if(!removeShortcut(&keycodeShortcut, integer0Return, nameListReturn)){
+			if(!removeShortcut(&keycodeShortcut, integer0Return, nameList0Return)){
 				printConfigError("shortcut error", "could not find key to ungrab", ';', true, true, false, false, configPath, statementLine, statementStart, statementWall, instructionStart, instructionCurrent, currentScopeInstructionList, currentScopeInstructionRoot, currentScopeInstructionData);
 				jmp getStatementStart;
 			}
 			if(name0Return <= lastGlobalCommand){
-				const xcb_void_cookie_t cookie = xcb_ungrab_key_checked(connection, integer0Return, (*screen).root, nameListReturn);
+				const xcb_void_cookie_t cookie = xcb_ungrab_key_checked(connection, integer0Return, (*screen).root, nameList0Return);
 				(void)cookie;
 /*!
 				xcb_generic_error_t *const error = xcb_request_check(connection, cookie);
@@ -4738,7 +4976,7 @@ READCONFIG(){
 				xcb_window_t *windowCurrent;
 				xcb_window_t *const windowWall = windowStart + windowAllocated;
 				ungrabWindowKeyLoop:{
-					const xcb_void_cookie_t cookie = xcb_ungrab_key_checked(connection, integer0Return, *windowCurrent, nameListReturn);
+					const xcb_void_cookie_t cookie = xcb_ungrab_key_checked(connection, integer0Return, *windowCurrent, nameList0Return);
 					xcb_generic_error_t *const error = xcb_request_check(connection, cookie);
 					uint token = pushPointer(error, "ungrab key check pointer", iFree);
 					if(error){
@@ -4756,12 +4994,12 @@ READCONFIG(){
 			jmp getStatementStart;
 		}
 		if(instructionStart == ungrabButtonInstruction){
-			if(!removeShortcut(&buttonShortcut, integer0Return, nameListReturn)){
+			if(!removeShortcut(&buttonShortcut, integer0Return, nameList0Return)){
 				printConfigError("shortcut error", "could not find button to ungrab", ';', true, true, false, false, configPath, statementLine, statementStart, statementWall, instructionStart, instructionCurrent, currentScopeInstructionList, currentScopeInstructionRoot, currentScopeInstructionData);
 				jmp getStatementStart;
 			}
 			if(name0Return <= lastGlobalCommand){
-				const xcb_void_cookie_t cookie = xcb_ungrab_button_checked(connection, integer0Return, (*screen).root, nameListReturn);
+				const xcb_void_cookie_t cookie = xcb_ungrab_button_checked(connection, integer0Return, (*screen).root, nameList0Return);
 				(void)cookie;
 /*!
 				xcb_generic_error_t *const error = xcb_request_check(connection, cookie);
@@ -4780,7 +5018,7 @@ READCONFIG(){
 				xcb_window_t *windowCurrent;
 				xcb_window_t *const windowWall = windowStart + windowAllocated;
 				ungrabWindowButtonLoop:{
-					const xcb_void_cookie_t cookie = xcb_ungrab_button_checked(connection, integer0Return, *windowCurrent, nameListReturn);
+					const xcb_void_cookie_t cookie = xcb_ungrab_button_checked(connection, integer0Return, *windowCurrent, nameList0Return);
 					xcb_generic_error_t *const error = xcb_request_check(connection, cookie);
 					uint token = pushPointer(error, "ungrab button check pointer", iFree);
 					if(error){
@@ -4827,31 +5065,35 @@ READCONFIG(){
 			jmp printHelpInstructionParametersLoop;
 			printHelpInstructionParametersLoop: switch *(inc n) over
 				to NONE_INSTRUCTION: /*------*/ jmp noneInstruction;
+				to NAME_INSTRUCTION: /*------*/ jmp nameInstruction;
+				to NAME_LIST_INSTRUCTION: /*-*/ jmp nameListInstruction;
+				to NUMBER_INSTRUCTION: /*----*/ jmp numberInstruction;
 				to STRING_INSTRUCTION: /*----*/ jmp stringInstruction;
 				to EXECUTE_INSTRUCTION: /*---*/ jmp executeInstruction;
-				to NAME_LIST_INSTRUCTION: /*-*/ jmp nameListInstruction;
-				to NAME_INSTRUCTION: /*------*/ jmp nameInstruction;
-				to NUMBER_INSTRUCTION: /*----*/ jmp numberInstruction;
 				off: /*----------------------*/ jmp printHelpInstructionParametersLoopExit;
 			end
 			noneInstruction:{
 				printError(" <unimplemented>");
 				jmp printHelpInstructionParametersLoopExit;
 			}
-			stringInstruction:{
+			nameInstruction:{
+				const char *const *stringArray;
 				if(displaySimpleConfigErrors){
-					printError(" string");
+					printError(" name");
 					jmp printHelpInstructionParametersLoop;
 				}
-				printError(" ([\"].*[\"]|[\'].*[\'])");
-				jmp printHelpInstructionParametersLoop;
-			}
-			executeInstruction:{
-				if(displaySimpleConfigErrors){
-					printError(" execute");
-					jmp printHelpInstructionParametersLoop;
+				stringArray = (**d).stringArray;
+				printError(" (%s", *stringArray);
+				inc stringArray;
+				printNameLoop:{
+					if(*stringArray){
+						printError("|%s", *stringArray);
+						inc stringArray;
+						jmp printNameLoop;
+					}
 				}
-				printError(" ([\"].*[\"]|[\'].*[\'])");
+				printError(")");
+				inc d;
 				jmp printHelpInstructionParametersLoop;
 			}
 			nameListInstruction:{
@@ -4884,32 +5126,28 @@ READCONFIG(){
 				inc d;
 				jmp printHelpInstructionParametersLoop;
 			}
-			nameInstruction:{
-				const char *const *stringArray;
-				if(displaySimpleConfigErrors){
-					printError(" name");
-					jmp printHelpInstructionParametersLoop;
-				}
-				stringArray = (**d).stringArray;
-				printError(" (%s", *stringArray);
-				inc stringArray;
-				printNameLoop:{
-					if(*stringArray){
-						printError("|%s", *stringArray);
-						inc stringArray;
-						jmp printNameLoop;
-					}
-				}
-				printError(")");
-				inc d;
-				jmp printHelpInstructionParametersLoop;
-			}
 			numberInstruction:{
 				if(displaySimpleConfigErrors){
 					printError(" number");
 					jmp printHelpInstructionParametersLoop;
 				}
 				printError(NUMBER_REGEX);
+				jmp printHelpInstructionParametersLoop;
+			}
+			stringInstruction:{
+				if(displaySimpleConfigErrors){
+					printError(" string");
+					jmp printHelpInstructionParametersLoop;
+				}
+				printError(" ([\"].*[\"]|[\'].*[\'])");
+				jmp printHelpInstructionParametersLoop;
+			}
+			executeInstruction:{
+				if(displaySimpleConfigErrors){
+					printError(" execute");
+					jmp printHelpInstructionParametersLoop;
+				}
+				printError(" ([\"].*[\"]|[\'].*[\'])");
 				jmp printHelpInstructionParametersLoop;
 			}
 		}
@@ -5927,37 +6165,39 @@ PRINTCONFIGERROR(){
 	}
 	printInstructionParameterLoop: switch *(inc instructionStart) over
 		to NONE_INSTRUCTION: /*------*/ jmp noneInstruction;
+		to NAME_INSTRUCTION: /*------*/ jmp nameInstruction;
+		to NAME_LIST_INSTRUCTION: /*-*/ jmp nameListInstruction;
+		to NUMBER_INSTRUCTION: /*----*/ jmp numberInstruction;
 		to STRING_INSTRUCTION: /*----*/ jmp stringInstruction;
 		to EXECUTE_INSTRUCTION: /*---*/ jmp executeInstruction;
-		to NAME_LIST_INSTRUCTION: /*-*/ jmp nameListInstruction;
-		to NAME_INSTRUCTION: /*------*/ jmp nameInstruction;
-		to NUMBER_INSTRUCTION: /*----*/ jmp numberInstruction;
 		off: /*----------------------*/ jmp printInstructionParameterLoopExit;
 	end
 	noneInstruction:{
 		fprintf(errorStream, " <unimplemented>");
 		jmp printInstructionParameterLoopExit;
 	}
-	stringInstruction:{
+	nameInstruction:{
+		const char *const *stringArray;
 		if(instructionStart < instructionCurrent){
+			inc data;
 			jmp printTilde;
 		}
 		if(displaySimpleConfigErrors){
-			fprintf(errorStream, " string");
+			fprintf(errorStream, " name");
 			jmp printInstructionParameterLoop;
 		}
-		fprintf(errorStream, " ([\"].*[\"]|[\'].*[\'])");
-		jmp printInstructionParameterLoop;
-	}
-	executeInstruction:{
-		if(instructionStart < instructionCurrent){
-			jmp printTilde;
+		stringArray = (**data).stringArray;
+		fprintf(errorStream, " (%s", *stringArray);
+		inc stringArray;
+		printNameLoop:{
+			if(*stringArray){
+				fprintf(errorStream, "|%s", *stringArray);
+				inc stringArray;
+				jmp printNameLoop;
+			}
 		}
-		if(displaySimpleConfigErrors){
-			fprintf(errorStream, " execute");
-			jmp printInstructionParameterLoop;
-		}
-		fprintf(errorStream, " ([\"].*[\"]|[\'].*[\'])");
+		fprintf(errorStream, ")");
+		inc data;
 		jmp printInstructionParameterLoop;
 	}
 	nameListInstruction:{
@@ -5994,30 +6234,6 @@ PRINTCONFIGERROR(){
 		inc data;
 		jmp printInstructionParameterLoop;
 	}
-	nameInstruction:{
-		const char *const *stringArray;
-		if(instructionStart < instructionCurrent){
-			inc data;
-			jmp printTilde;
-		}
-		if(displaySimpleConfigErrors){
-			fprintf(errorStream, " name");
-			jmp printInstructionParameterLoop;
-		}
-		stringArray = (**data).stringArray;
-		fprintf(errorStream, " (%s", *stringArray);
-		inc stringArray;
-		printNameLoop:{
-			if(*stringArray){
-				fprintf(errorStream, "|%s", *stringArray);
-				inc stringArray;
-				jmp printNameLoop;
-			}
-		}
-		fprintf(errorStream, ")");
-		inc data;
-		jmp printInstructionParameterLoop;
-	}
 	numberInstruction:{
 		if(instructionStart < instructionCurrent){
 			jmp printTilde;
@@ -6027,6 +6243,28 @@ PRINTCONFIGERROR(){
 			jmp printInstructionParameterLoop;
 		}
 		fprintf(errorStream, NUMBER_REGEX);
+		jmp printInstructionParameterLoop;
+	}
+	stringInstruction:{
+		if(instructionStart < instructionCurrent){
+			jmp printTilde;
+		}
+		if(displaySimpleConfigErrors){
+			fprintf(errorStream, " string");
+			jmp printInstructionParameterLoop;
+		}
+		fprintf(errorStream, " ([\"].*[\"]|[\'].*[\'])");
+		jmp printInstructionParameterLoop;
+	}
+	executeInstruction:{
+		if(instructionStart < instructionCurrent){
+			jmp printTilde;
+		}
+		if(displaySimpleConfigErrors){
+			fprintf(errorStream, " execute");
+			jmp printInstructionParameterLoop;
+		}
+		fprintf(errorStream, " ([\"].*[\"]|[\'].*[\'])");
 		jmp printInstructionParameterLoop;
 	}
 	printTilde:{
