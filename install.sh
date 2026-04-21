@@ -1,3 +1,4 @@
+
 # install.sh
 #
 # MIT License
@@ -24,17 +25,43 @@
 
 #!/bin/bash
 
-name="microsound"
+NAME="install.sh";
+true=1;
+false=0;
 
-[ "$EUID" != "0"  ] && { printf "installer not running as root\n"; exit 0;       } || :
-cd $(dirname $0)
-[ ! -f install.sh ] && { cd $(cd $(dirname $BASH_SOURCE) && pwd);                } || :
-[ ! -f install.sh ] && { printf "could not find install.sh directory\n"; exit 0; } || :
-rm    /bin/$name &> /dev/null
-rm -R /etc/$name &> /dev/null
-mkdir /etc/$name
-cp    output/$name /bin/$name
-cp -R assets/      /etc/$name/
-cp    $name.conf   /etc/$name/$name.conf
-exit 0
+function main(){
+	[ $true                             ] && { local name="microsound";                                                                                      } || :;
+	[ $true                             ] && { local user="$(getRegularUser)";                                                                               } || :;
+	[ $true                             ] && { local home="$(getent passwd "$user" | cut -d : -f 6)";                                                        } || :;
+	[ $true                             ] && { cd "${BASH_SOURCE%/*}";                                                                                       } || :;
+	[ "$EUID" != "0"                    ] && { printf "$NAME: installer not running as root\n";                                               return 1;      } || :;
+	[ ! -n "$user"                      ] && { printf "$NAME: could not find regular user\n"; 1>&2;                                           return 1;      } || :;
+	[[ ! -n "$home" || "$home" == "/"  ]] && { printf "$NAME: could not find regular user home directory\n"; 1>&2;                            return 1;      } || :;
+	[ ! -f "$NAME"                      ] && { printf "$NAME: could not find $NAME directory\n" 1>&2;                                         return 1;      } || :;
+	[ ! -f "compile.sh"                 ] && { printf "$NAME: could not find $name compilation file\n" 1>&2;                                  return 1;      } || :;
+	[ ! -d "etc/$name"                  ] && { printf "$NAME: could not find $name system configuration directory\n" 1>&2;                    return 1;      } || :;
+	[ ! -d ".config/$name"              ] && { printf "$NAME: could not find $name user configuration directory\n" 1>&2;                      return 1;      } || :;
+	[ ! -f "/tmp/$name/output/$name"    ] && { printf "$NAME: could not find $name executable, compiling...\n"; sudo -u "$user" ./compile.sh;                } || :;
+	[ ! -f "/tmp/$name/output/$name"    ] && { printf "$NAME: could not compile $name executable\n"; 1>&2;                                    return 1;      } || :;
+	[ $true                             ] && { rm -rf "/bin/$name" "/etc/$name" &> /dev/null;                                                                } || :;
+	[ $true                             ] && { mkdir -p "/bin" "/etc" &> /dev/null;                                                                          } || :;
+	[ $true                             ] && { sudo -u "$user" mkdir -p "$home/.config" &> /dev/null;                                                        } || :;
+	[ $true                             ] && { cp "/tmp/$name/output/$name" "/bin/$name" &> /dev/null;                                                       } || :;
+	[ $true                             ] && { cp -r "etc/$name" "/etc/$name" &> /dev/null;                                                                  } || :;
+	[ ! -d "$home/.config/$name"        ] && { sudo -u "$user" cp -r ".config/$name" "$home/.config/$name" &> /dev/null;                                     } || :;
+	[ $true                             ] && { rm -rf "/tmp/$name" &> /dev/null;                                                                             } || :;
+	[ $true                             ] && { printf "done\n";                                                                               return 0;      } || :;
+}
+function getRegularUser(){
+	[ $true                             ] && { local user="${SUDO_USER:-$USER}";                                                                             } || :;
+	[[ -n "$user" && "$user" != "root" ]] && { printf "%s\n" "$user";                                                                         return $true;  } || :;
+	[ $true                             ] && { user="$(logname)";                                                                                            } || :;
+	[[ -n "$user" && "$user" != "root" ]] && { printf "%s\n" "$user";                                                                         return $true;  } || :;
+	[ $true                             ] && { user="$(loginctl list-users --no-legend 2> /dev/null | awk 'NR==1 {print $2; exit}')";                        } || :;
+	[[ -n "$user" && "$user" != "root" ]] && { printf "%s\n" "$user";                                                                         return $true;  } || :;
+	[ $true                             ] && { printf "\n";                                                                                   return $false; } || :;
+}
+
+main "$@";
+exit $?;
 

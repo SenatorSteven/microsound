@@ -1,3 +1,4 @@
+
 # uninstall.sh
 #
 # MIT License
@@ -24,13 +25,30 @@
 
 #!/bin/bash
 
-name="microsound"
+NAME="uninstall.sh";
+true=1;
+false=0;
 
-[ "$EUID" != "0"  ] && { printf "installer not running as root\n"; exit 0;       } || :
-cd $(dirname $0)
-[ ! -f uninstall.sh ] && { cd $(cd $(dirname $BASH_SOURCE) && pwd);                  } || :
-[ ! -f uninstall.sh ] && { printf "could not find uninstall.sh directory\n"; exit 0; } || :
-rm    /bin/$name &> /dev/null
-rm -R /etc/$name &> /dev/null
-exit 0
+function main(){
+	[ $true                             ] && { local name="microsound";                                                                              } || :;
+	[ $true                             ] && { local user="$(getRegularUser)";                                                                       } || :;
+	[ $true                             ] && { local home="$(getent passwd "$user" | cut -d : -f 6)";                                                } || :;
+	[ "$EUID" != "0"                    ] && { printf "$NAME: uninstaller not running as root\n" 1>&2;                                return 1;      } || :;
+	[ ! -n "$user"                      ] && { printf "$NAME: could not find regular user\n"; 1>&2;                                   return 1;      } || :;
+	[[ ! -n "$home" || "$home" == "/"  ]] && { printf "$NAME: could not find regular user home directory\n"; 1>&2;                    return 1;      } || :;
+	[ ! -f "$NAME"                      ] && { printf "$NAME: could not find $NAME directory\n" 1>&2;                                 return 1;      } || :;
+	[ $true                             ] && { rm -rf "/bin/$name" "/etc/$name" &> /dev/null;                                         return 0;      } || :;
+}
+function getRegularUser(){
+	[ $true                             ] && { local user="${SUDO_USER:-$USER}";                                                                     } || :;
+	[[ -n "$user" && "$user" != "root" ]] && { printf "%s\n" "$user";                                                                 return $true;  } || :;
+	[ $true                             ] && { user="$(logname)";                                                                                    } || :;
+	[[ -n "$user" && "$user" != "root" ]] && { printf "%s\n" "$user";                                                                 return $true;  } || :;
+	[ $true                             ] && { user="$(loginctl list-users --no-legend 2> /dev/null | awk 'NR==1 {print $2; exit}')";                } || :;
+	[[ -n "$user" && "$user" != "root" ]] && { printf "%s\n" "$user";                                                                 return $true;  } || :;
+	[ $true                             ] && { printf "\n";                                                                           return $false; } || :;
+}
+
+main "$@";
+exit $?;
 
